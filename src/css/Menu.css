@@ -1,0 +1,16 @@
+.menu{
+    list-style:none;
+    text-align: left;
+    padding:0px;
+    margin:0px;
+    display:list-item;
+}
+.menu__item{
+    padding: 12px 24px 12px 24px;
+}
+.menu__icon{
+    margin: 0px 12px 0px 0px
+}
+.menu__item:hover{
+    background-color: #ddd;
+}
