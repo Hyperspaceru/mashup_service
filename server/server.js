@@ -6,12 +6,12 @@ const cookieParser = require('cookie-parser')
 const compression = require('compression')
 const helmet = require('helmet')
 const cors = require('cors')
-// Import routes
-const routes = require('./routes');
 // Setup default port
 const PORT = process.env.PORT || 4000
 // Create express app
 const app = express()
+// Import routes
+const MashupRoutes = require ('./routes/MashupRoutes');
 // Implement middleware
 app.use(cors())
 app.use(helmet())
@@ -26,7 +26,7 @@ if (process.env.NODE_ENV && process.env.NODE_ENV !== 'development') {
   })
 }
 // Implement route for '/api' endpoint
-app.use('/', routes)
+app.use('/mashup/', MashupRoutes)
 // Implement route for errors
 app.use((err, req, res, next) => {
    console.error(err.stack)
