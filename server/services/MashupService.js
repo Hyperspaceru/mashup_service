@@ -3,27 +3,27 @@ import database from '../models';
 class MashupService {
     static async getAllMashups() {
         try {
-          return await database.Mashup.findAll();
+          return await database.mashup.findAll();
         } catch (error) {
           throw error;
         }
       }
     static async addMashup(newMashup) {
         try {
-            return await database.Mashup.create(newMashup);
+            return await database.mashup.create(newMashup);
         } catch (error) {
             throw error;
         }
     }
     static async updateMashup(id, groupId , updateMashup) {
         try {
-            const mashupToUpdate = await database.Mashup.findOne({
+            const mashupToUpdate = await database.mashup.findOne({
                 where: { id: Number(id),
                 groupId:Number(groupId) }
             });
 
             if (mashupToUpdate) {
-                await database.Mashup.update(updateMashup, { where: { id: Number(id),
+                await database.mashup.update(updateMashup, { where: { id: Number(id),
                 groupId:Number(groupId) } });
 
                 return updateMashup;

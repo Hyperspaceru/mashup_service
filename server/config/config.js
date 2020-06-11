@@ -9,9 +9,9 @@ module.exports = {
   // },
 
   development: {
-    database: 'books',
-    username: 'steven',
-    password: null,
+    database: 'mashup',
+    username: 'mashup',
+    password: 'mashup',
     host: '127.0.0.1',
     dialect: 'postgres'
   },

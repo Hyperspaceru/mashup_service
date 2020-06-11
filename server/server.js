@@ -1,17 +1,17 @@
 // Import express framework
-const express = require('express')
+import express from 'express'
 // Import middleware
-const bodyParser = require('body-parser')
-const cookieParser = require('cookie-parser')
-const compression = require('compression')
-const helmet = require('helmet')
-const cors = require('cors')
+import bodyParser from 'body-parser'
+import cookieParser from 'cookie-parser'
+import compression from 'compression'
+import helmet from 'helmet'
+import cors from 'cors'
+// Import routes
+import MashupRoutes from './routes/MashupRoutes'
 // Setup default port
 const PORT = process.env.PORT || 4000
 // Create express app
 const app = express()
-// Import routes
-const MashupRoutes = require ('./routes/MashupRoutes');
 // Implement middleware
 app.use(cors())
 app.use(helmet())

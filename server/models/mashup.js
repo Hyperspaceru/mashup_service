@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    groupId: {
+    publicId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       allowNull: false

@@ -24,7 +24,8 @@
   },
   "scripts": {
     "build": "node ./buildScript",
-    "server-start": "cross-env NODE_ENV=development nodemon server/server.js --watch server/*",
+    "server-start": "cross-env NODE_ENV=development nodemon --exec babel-node server/server.js",
+    "server-start1": "cross-env NODE_ENV=development nodemon server/server.js --watch server/*",
     "front-start": "react-scripts start",
     "front-build": "react-scripts build",
     "test": "react-scripts test",
@@ -46,5 +47,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/core": "^7.10.2",
+    "@babel/node": "^7.10.1"
   }
 }
