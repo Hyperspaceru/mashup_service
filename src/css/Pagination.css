@@ -1,0 +1,29 @@
+.pagination{
+    list-style-type: none;
+    display:flex;
+    flex-direction: row;
+}
+.pagination__item{
+ 
+}
+.pagination__link--active{
+    background-color: #4CAF50;
+    color: white;
+}
+.pagination__link{
+    margin: 0px -1px;
+    padding: 8px 16px;
+    text-decoration: none;
+    color: black;
+    border: 1px solid #ddd;
+}
+.pagination__link:hover:not(.pagination__link--active){
+    background-color: #ddd
+}
+.pagination__item:last-child .pagination__link{
+    border-radius: 0px 5px 5px 0px;
+}
+.pagination__item:first-child .pagination__link{
+    border-radius: 5px 0px 0px 5px;
+}
+

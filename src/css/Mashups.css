@@ -1,0 +1,15 @@
+
+.mashups{
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td{
+    border-bottom: 1px solid #ddd;
+    text-align:left;
+}
+.mashups__tbody tr:hover{
+    background-color: #f5f5f5;
+}
+th:hover  {
+    background-color:none !important;
+}

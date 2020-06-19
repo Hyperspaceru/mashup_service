@@ -6,7 +6,7 @@
   flex-wrap: nowrap;
 }
 .main_menu {
-  width:256px;
+  flex:0 0 256px;
   margin:0;
   padding:0;
 }

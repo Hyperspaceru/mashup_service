@@ -6,9 +6,31 @@ const util = new Util();
 class MashupController {
     static async getAllMashups(req, res) {
         try {
-            const allMashup = await MashupService.getAllMashups();
-            if (allMashup.length > 0) {
-                util.setSuccess(200, 'Mashup retrieved', allMashup);
+            const page = req.query.page;
+            const type = req.query.type?req.query.type:"all";
+            let resultMashups = []
+            switch (type){
+                case "deny":
+                    resultMashups = await MashupService.getMashupsDeny(page);
+                    break;
+                case "accept":
+                    resultMashups = await MashupService.getMashupsAccepted(page);
+                    break;
+                case "error":
+                    resultMashups = await MashupService.getMashupsError(page);
+                    break;
+                case "wait":
+                    resultMashups = await MashupService.getMashupsForAccept(page);
+                    break;
+                case "done":
+                    resultMashups = await MashupService.getMashupsDone(page);                    
+                    break;
+                case "all":
+                default:
+                    resultMashups = await MashupService.getAllMashups(page);
+            }
+            if (resultMashups.length > 0) {
+                util.setSuccess(200, 'Mashup retrieved', resultMashups  );
             } else {
                 util.setSuccess(200, 'No mashup found');
             }
@@ -19,36 +41,28 @@ class MashupController {
         }
     }
 
-    static async addMashup(req, res) {
-        if (!req.body.title || !req.body.price || !req.body.description) {
-            util.setError(400, 'Please provide complete details');
-            return util.send(res);
-        }
-        const newMashup = req.body;
+    static async updateMashups(req, res) {
+        const alteredMashups = req.body;
         try {
-            const createdMashup = await MashupService.addMashup(newMashup);
-            util.setSuccess(201, 'Mashup Added!', createdMashup);
-            return util.send(res);
-        } catch (error) {
-            util.setError(400, error.message);
-            return util.send(res);
-        }
-    }
-
-    static async updateMashup(req, res) {
-        const alteredMashup = req.body;
-        const { id, groupId } = req.params;
-        if (!Number(id) && !Number(groupId)) {
-            util.setError(400, 'Please input a valid numeric value');
-            return util.send(res);
-        }
-        try {
-            const updatedMashup = await MashupService.updatedMashup(id, groupId, alteredMashup);
+        await alteredMashups.forEach((mashup)=>{
+            let id = mashup.id
+            let publicId = mashup.publicId
+            if (!Number(id) && !Number(publicId)) {
+                util.setError(400, 'Please input a valid numeric value');
+                return util.send(res);
+            }
+        })
+       await alteredMashups.forEach(async (mashup)=>{
+            let id = mashup.id
+            let publicId = mashup.publicId
+            const updatedMashup = await MashupService.updateMashup(id, publicId, mashup);
             if (!updatedMashup) {
-                util.setError(404, `Cannot find mashup with the id: ${id} and groupid ${groupId}`);
+                util.setError(404, `Cannot find mashup with the id: ${id} and publicId ${publicId}`);
+                return util.send(res);
             } else {
                 util.setSuccess(200, 'mashup updated', updatedMashup);
-            }
+            }            
+        })
             return util.send(res);
         } catch (error) {
             util.setError(404, error);

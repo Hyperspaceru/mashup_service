@@ -52,7 +52,7 @@ module.exports = {
         type: Sequelize.DATE
       },
       likes: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.INTEGER
       },
       createdAt: {
         allowNull: false,

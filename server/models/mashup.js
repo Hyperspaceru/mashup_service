@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE
     },
     likes: {
-      type: DataTypes.BOOLEAN
+      type: DataTypes.INTEGER
     }
   }, {});
   mashup.associate = function(models) {
