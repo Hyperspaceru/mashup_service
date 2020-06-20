@@ -33,7 +33,8 @@ class MashupService {
                     where: {
                         approve: null,
                         youtubeLink: null
-                    }
+                    },
+                    order:[['likes','desc']]
                 })
             return Mashups
         } catch (error) {
@@ -56,7 +57,9 @@ class MashupService {
                     offset: offset,
                     where: {
                         approve: false
-                    }
+                    },
+                    order:[
+                        ['postDate','desc']]
                 })
             return Mashups
         } catch (error) {
@@ -108,7 +111,9 @@ class MashupService {
                     where: {
                         approve: true,
                         youtubeLink: null
-                    }
+                    },
+                    order:[
+                        ['postDate','desc']]
                 })
             return Mashups
         } catch (error) {

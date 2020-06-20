@@ -24,6 +24,8 @@ const Mashups = ({ mashupList,updateHook , loading }) => {
                     <th>Audio</th>
                     <th>Title</th>
                     <th>Source</th>
+                    <th>Likes</th>
+                    <th>Date</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -35,6 +37,8 @@ const Mashups = ({ mashupList,updateHook , loading }) => {
                         <td><i class="fas fa-play"></i></td>
                         <td>{`${mashup.author} - ${mashup.title}`}</td>
                         <td><a target="_blank" href={mashup.postLink}>{mashup.postLink}</a>   </td>
+                        <td>{mashup.likes}</td>
+                        <td>{new Date(mashup.postDate).toLocaleDateString()}</td>
                         <td>{mashup.status}</td>
                     </tr>
                 ))}

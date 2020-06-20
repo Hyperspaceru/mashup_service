@@ -8,6 +8,8 @@ import helmet from 'helmet'
 import cors from 'cors'
 // Import routes
 import MashupRoutes from './routes/MashupRoutes'
+// Import service 
+import ScheduleService from './services/ScheduleService'
 // Setup default port
 const PORT = process.env.PORT || 4000
 // Create express app
@@ -36,3 +38,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, function() {
   console.log(`Server is running on: ${PORT}`)
 })
+
+ScheduleService()

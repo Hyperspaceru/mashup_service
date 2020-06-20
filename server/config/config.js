@@ -1,4 +1,6 @@
+import {resolve} from 'path'
 require('dotenv').config();
+
 
 
 module.exports = {
@@ -30,5 +32,22 @@ module.exports = {
     password: process.env.DB_PASS,
     host: process.env.DB_HOST,
     dialect: 'postgres'
+  },
+
+  mashup: {
+    downloadDir: resolve('./public/downloads'),
+    vk: {
+      email: process.env.VK_EMAIL,
+      phone: process.env.VK_PHONE,
+      password: process.env.VK_PASS,
+      sessionFile: resolve("./server/config/credentials/.my-session")
+    },
+    puppeteer:{
+      cookies: resolve('./server/config/credentials/cookies.json')
+    },
+    youtube: {
+      email: process.env.YOUTUBE_EMAIL,
+      password: process.env.YOUTUBE_PASS
+    }
   }
 };
