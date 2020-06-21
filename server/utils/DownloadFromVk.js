@@ -1,14 +1,32 @@
-const puppeteer = require('puppeteer')
-const fsSync = require('fs')
-const https = require('https')
-const database = require('../models')
-const config = require('../config/config')
-const fs = require('fs').promises;
+import puppeteer from 'puppeteer'
+import fsSync from 'fs'
+import https from 'https'
+import database from '../models';
+import config from '../config/config'
+import { spawn } from 'child_process'
 
-async function getAudioData(page) {
-    return await page.evaluate(async function () {
-        debugger;
-        //если вылетает ошибка, нужно использовать версию puppeteer 
+const fs = require('fs').promises;
+const cmd = '/usr/bin/ffmpeg';
+
+const replaceInFile = async (fileName, regexPattern, replacement) => {
+    fsSync.readFile(fileName, 'utf8', function (err, data) {
+        if (err) {
+            return console.log(err);
+        }
+        var result = data.replace(regexPattern, replacement);
+        fsSync.writeFile(fileName, result, 'utf8', function (err) {
+            if (err) return console.log(err);
+        });
+    });
+    await new Promise(resolve => setTimeout(resolve, 5000));
+}
+//"https://vk.com/mp3/audio_api_unavailable.mp3?extra=Ae0OuN0YtJf3A1nqqNC5twTHCZjLDt9xy1bjnf01EfffuJm5v2n5zgzou1jUuKTiqwnlywXzr3rQDwPsCNnUtLCZDdfYnfrjvgvfyKmUAuq6zwv1CMjZyvKXBODkAefpzNDcs3z5C3nux1qVuhzZlwjRohbRExfNq1DTl2z5CffkELfjl3jkt2jowuyVDMXOps1gCdrOneLszvDvnv8XyJzYlMPvDeiYvKvTqMm2Au9Jrei2n20XzhHHyxnNmvfor2XWrJjvs3f1y1HLngKYrdnPnxaUAxz2#AqS5nJy"
+// https://cs1-39v4.vkuseraudio.net/p4/2fa9fe5a144cb1.mp3
+// иногда попадается прямая ссылка на mp3, а не audio_api_unavailable, поэтому надо учесть
+// || songUrl.indexOf("audio_api_unavailable.mp3") !== -1
+const getAudioData = async (page) => {
+    return await page.evaluate(`(async () => {
+        //если вылетает ошибка, нужно использовать версию puppeteer
         function encode_url(t) {
             //функция, декодирующая ссылку на аудиозапись
             let c = {
@@ -20,33 +38,29 @@ async function getAudioData(page) {
                 let e = t.split('?extra=')[1].split('#'), i = '' === e[1] ? '' : h(e[1]);
                 if (e = h(e[0]), 'string' != typeof i || !e) return t; for (var o, a, s = (i = i ? i.split(String.fromCharCode(9)) : []).length; s--;) { if (o = (a = i[s].split(String.fromCharCode(11))).splice(0, 1, e)[0], !c[o]) return t; e = c[o].apply(null, a) } if (e && 'http' === e.substr(0, 4)) return e
             } return t
-        };
-
+        }
+        debugger
         let audioRows = document.querySelectorAll(".wall_text .audio_row");
         let audioData = [];
-        // debugger
         for (let audioRow of audioRows) {
             audioData.push(JSON.parse(audioRow.getAttribute('data-audio')));
         }
         let songUrl = ''
         if (audioData.length > 0) {
             songUrl = encode_url(audioData[0][2]);
-            if (songUrl.indexOf(".mp3?") == -1) {
-                if (songUrl.indexOf("/index.m3u8") == -1) {
-                    songUrl = '';
-                } else {
-                    songUrl = songUrl.replace("/index.m3u8", ".mp3").replace(/\/\w{11}\//, '/');
-                }
-            }
+            if (songUrl.indexOf("/index.m3u8") == -1  ) {
+                songUrl = '';
+            }           
         }
-        return await new Promise(resolve => {
+        return await new Promise((resolve) => {
             resolve(songUrl);
         })
-    });
+    })()`)
 }
 
 
 const DownloadFromVk = async () => {
+    // for debug
     const browser = await puppeteer.launch({ devtools: true });
     // const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -106,40 +120,95 @@ const DownloadFromVk = async () => {
         //audio download
         await page.goto(wallPost.postLink, { waitUntil: 'networkidle2' });
         const audioUrl = await getAudioData(page);
-        if (audioUrl) {
-            let audioPath = `${downloadPath}/${wallPost.id}.mp3`
-            const file = await fsSync.createWriteStream(audioPath);
-            await https.get(audioUrl, function (response) {
-                response.pipe(file).on('error', function (e) {
-                    console.log(e)
+        console.log(1)
+        if (audioUrl) {            
+            let m3uPath = `${downloadPath}/${wallPost.id}.m3u8`
+            const m3uFile = await fsSync.createWriteStream(m3uPath)            
+            await https.get(audioUrl,async function (response) {
+                await response.pipe(m3uFile).on('error', function (e) {
                     database.mashup.update({
                         audioPath: '',
-                        status: e.toString()
+                        status: 'M3U_DOWNLOAD_ERROR'
                     }, {
                         where: {
                             id: wallPost.id,
-                            postLink: wallPost.publicId
+                            publicId: wallPost.publicId
                         }
                     })
-                }).on('finish', () => {
-                    database.mashup.update({
-                        audioPath: audioPath
-                    }, {
-                        where: {
-                            id: wallPost.id,
-                            postLink: wallPost.publicId
-                        }
-                    })
+                })
+            })
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            m3uFile.end()
+            let hostUrl = audioUrl.split("index.m3u8")[0]
+            let searchPattern = /^.+?\.ts\?extra=.+?\n/gim
+            let replaceString = `${hostUrl}$&`
+            await replaceInFile(m3uPath, searchPattern, replaceString)
+            let audioPath = `${downloadPath}/${wallPost.id}.aac`
+            const args = [
+                '-y',
+                '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
+                '-i', m3uPath,
+                '-c', 'copy',
+                audioPath
+            ]
+
+            let converter = new Promise((resolve, reject) => {
+                var proc = spawn(cmd, args,{ shell: true });
+                
+                // for debug purposes
+                proc.stdout.on('data', function (data) {
+                    console.log(data);
                 });
-            });
+
+                proc.stderr.setEncoding("utf8")
+                proc.stderr.on('data', function (data) {
+                     console.log(data);
+                });
+
+                proc.on('close', (code) => {
+                    if (code !== 0) {
+                        reject(`process exited with code ${code}`);
+                    } else {
+                        resolve('ok')
+                    }
+
+                });
+
+            })
+
+            await converter.then((message) => {
+                if (message == 'ok') {
+                    database.mashup.update({
+                        audioPath: audioPath,
+                        imagePath:imagePath
+                    }, {
+                        where: {
+                            id: wallPost.id,
+                            publicId: wallPost.publicId
+                        }
+                    })
+                    console.log(`Done : ${wallPost.postLink}`)
+                } else {
+                    database.mashup.update({
+                        audioPath: '',
+                        status: 'AAC_CONVERSION_ERROR'
+                    }, {
+                        where: {
+                            id: wallPost.id,
+                            publicId: wallPost.publicId
+                        }
+                    })
+                    console.log(`AAC_CONVERSION_ERROR : ${wallPost.postLink}`)
+                }
+            })
         }
         else {
             await database.mashup.update({
-                status: 'AUDIO NOT FOUND'
+                status: 'AUDIO_NOT_FOUND'
             }, {
                 where: {
                     id: wallPost.id,
-                    postLink: wallPost.publicId
+                    publicId: wallPost.publicId
                 }
             })
             await console.log('not found: ' + wallPost.postLink);
@@ -150,5 +219,7 @@ const DownloadFromVk = async () => {
     await browser.close();
 }
 
+export default DownloadFromVk
 
-DownloadFromVk()
+
+

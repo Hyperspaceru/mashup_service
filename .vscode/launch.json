@@ -15,15 +15,6 @@
       ]
     },
     {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug util without babel",
-      "program": "${workspaceFolder}/server/utils/DownloadFromVk.js",
-      "runtimeArgs": [
-        "--nolazy"
-      ]
-    },
-    {
       "type": "chrome",
       "request": "launch",
       "name": "Launch Chrome against localhost",

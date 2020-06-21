@@ -47,7 +47,8 @@ module.exports = {
     },
     youtube: {
       email: process.env.YOUTUBE_EMAIL,
-      password: process.env.YOUTUBE_PASS
+      password: process.env.YOUTUBE_PASS,
+      cookies: resolve('./server/config/credentials/cookiesYoutube.json')
     }
   }
 };
