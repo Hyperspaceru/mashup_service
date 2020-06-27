@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer'
 import fsSync from 'fs'
 import https from 'https'
+import { https as httpsRedirect } from 'follow-redirects'
 import database from '../models';
 import config from '../config/config'
 import { spawn } from 'child_process'
@@ -8,22 +9,77 @@ import { spawn } from 'child_process'
 const fs = require('fs').promises;
 const cmd = '/usr/bin/ffmpeg';
 
-const replaceInFile = async (fileName, regexPattern, replacement) => {
-    fsSync.readFile(fileName, 'utf8', function (err, data) {
-        if (err) {
-            return console.log(err);
-        }
-        var result = data.replace(regexPattern, replacement);
-        fsSync.writeFile(fileName, result, 'utf8', function (err) {
-            if (err) return console.log(err);
+const downloadFile = (url, path) => {
+    return new Promise((resolve) => {
+        const fileStream = fsSync.createWriteStream(path);
+        fileStream.on('finish', () => {
+            resolve('Done')
+        })
+        httpsRedirect.get(url, function (response) {
+            response.pipe(fileStream).on('error', function (e) {
+                let errorMessage = { code: 1, message: `FILE_DOWNLOAD_ERROR: ${path}` };
+                throw errorMessage
+            })
+        })
+    })
+}
+
+const convertM3U8 = (m3u8Path, audioPath) => {
+    const args = [
+        '-y',
+        '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
+        '-i', m3u8Path,
+        '-c', 'copy',
+        audioPath
+    ]
+
+    let converter = new Promise((resolve, reject) => {
+        var proc = spawn(cmd, args, { shell: true });
+        // for debug purposes
+        proc.stdout.on('data', function (data) {
+            console.log(data);
         });
-    });
-    await new Promise(resolve => setTimeout(resolve, 5000));
+        proc.stderr.setEncoding("utf8")
+        proc.stderr.on('data', function (data) {
+            console.log(data);
+        });
+
+        proc.on('close', (code) => {
+            if (code !== 0) {
+                reject(`process exited with code ${code}`);
+            } else {
+                resolve('ok')
+            }
+        });
+    })
+    return converter.then((message) => {
+        if (message === 'ok') {
+            console.log('M3U8 CONVERSION OK')
+        } else {
+            let errorMessage = { code: 1, message: `AAC_CONVERSION_ERROR` };
+            throw errorMessage
+        }
+    })
+}
+
+const downloadM3U8 = async (url, path) => {
+    await downloadFile(url,path)
+    //add hostname to source urls in m3u8 file
+    let hostUrl = url.split("index.m3u8")[0]
+    let searchPattern = /^.+?\.ts\?extra=.+?\n/gim
+    let replaceString = `${hostUrl}$&`
+    return await replaceInFile(path, searchPattern, replaceString)
+}
+
+const replaceInFile = async (fileName, regexPattern, replacement) => {
+    let data = await fs.readFile(fileName,{encoding:'utf8'})    
+    let result = data.replace(regexPattern, replacement);
+    return await fs.writeFile(fileName,result,'utf8')
+    // await new Promise(resolve => setTimeout(resolve, 5000));
 }
 //"https://vk.com/mp3/audio_api_unavailable.mp3?extra=Ae0OuN0YtJf3A1nqqNC5twTHCZjLDt9xy1bjnf01EfffuJm5v2n5zgzou1jUuKTiqwnlywXzr3rQDwPsCNnUtLCZDdfYnfrjvgvfyKmUAuq6zwv1CMjZyvKXBODkAefpzNDcs3z5C3nux1qVuhzZlwjRohbRExfNq1DTl2z5CffkELfjl3jkt2jowuyVDMXOps1gCdrOneLszvDvnv8XyJzYlMPvDeiYvKvTqMm2Au9Jrei2n20XzhHHyxnNmvfor2XWrJjvs3f1y1HLngKYrdnPnxaUAxz2#AqS5nJy"
 // https://cs1-39v4.vkuseraudio.net/p4/2fa9fe5a144cb1.mp3
 // иногда попадается прямая ссылка на mp3, а не audio_api_unavailable, поэтому надо учесть
-// || songUrl.indexOf("audio_api_unavailable.mp3") !== -1
 const getAudioData = async (page) => {
     return await page.evaluate(`(async () => {
         //если вылетает ошибка, нужно использовать версию puppeteer
@@ -39,7 +95,7 @@ const getAudioData = async (page) => {
                 if (e = h(e[0]), 'string' != typeof i || !e) return t; for (var o, a, s = (i = i ? i.split(String.fromCharCode(9)) : []).length; s--;) { if (o = (a = i[s].split(String.fromCharCode(11))).splice(0, 1, e)[0], !c[o]) return t; e = c[o].apply(null, a) } if (e && 'http' === e.substr(0, 4)) return e
             } return t
         }
-        debugger
+       
         let audioRows = document.querySelectorAll(".wall_text .audio_row");
         let audioData = [];
         for (let audioRow of audioRows) {
@@ -48,7 +104,7 @@ const getAudioData = async (page) => {
         let songUrl = ''
         if (audioData.length > 0) {
             songUrl = encode_url(audioData[0][2]);
-            if (songUrl.indexOf("/index.m3u8") == -1  ) {
+            if (songUrl.indexOf("audio_api_unavailable.mp3") > -1  ) {
                 songUrl = '';
             }           
         }
@@ -105,113 +161,64 @@ const DownloadFromVk = async () => {
     const progressFinish = wallPosts.length;
     let progressCount = 0;
     for (let wallPost of wallPosts) {
-        const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
-        const downloadPath = `${config.mashup.downloadDir}/${downloadDir}`
-        if (!fsSync.existsSync(downloadPath)) {
-            fsSync.mkdirSync(downloadPath);
-        }
-        //image download
-        let imagePath = `${downloadPath}/${wallPost.id}.jpg`
-        const imageFile = await fsSync.createWriteStream(imagePath);
-        await https.get(wallPost.imageUrl, function (response) {
-            response.pipe(imageFile);
-        });
+        try {
+            const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
+            const downloadPath = `${config.mashup.downloadDir}/${downloadDir}`
+            if (!fsSync.existsSync(downloadPath)) {
+                fsSync.mkdirSync(downloadPath);
+            }
+            //image download
+            let imagePath
+            if (wallPost.imageExt === 'jpg') {
+                imagePath = `${downloadPath}/${wallPost.id}.jpg`
+            } else if (wallPost.imageExt === 'gif/mp4') {
+                imagePath = `${downloadPath}/${wallPost.id}.gif.mp4`
+            } else if (wallPost.imageExt === 'gif') {
+                imagePath = `${downloadPath}/${wallPost.id}.gif`
+            }
+            await downloadFile(wallPost.imageUrl, imagePath)
 
-        //audio download
-        await page.goto(wallPost.postLink, { waitUntil: 'networkidle2' });
-        const audioUrl = await getAudioData(page);
-        console.log(1)
-        if (audioUrl) {            
-            let m3uPath = `${downloadPath}/${wallPost.id}.m3u8`
-            const m3uFile = await fsSync.createWriteStream(m3uPath)            
-            await https.get(audioUrl,async function (response) {
-                await response.pipe(m3uFile).on('error', function (e) {
-                    database.mashup.update({
-                        audioPath: '',
-                        status: 'M3U_DOWNLOAD_ERROR'
-                    }, {
-                        where: {
-                            id: wallPost.id,
-                            publicId: wallPost.publicId
-                        }
-                    })
-                })
-            })
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            m3uFile.end()
-            let hostUrl = audioUrl.split("index.m3u8")[0]
-            let searchPattern = /^.+?\.ts\?extra=.+?\n/gim
-            let replaceString = `${hostUrl}$&`
-            await replaceInFile(m3uPath, searchPattern, replaceString)
-            let audioPath = `${downloadPath}/${wallPost.id}.aac`
-            const args = [
-                '-y',
-                '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
-                '-i', m3uPath,
-                '-c', 'copy',
-                audioPath
-            ]
 
-            let converter = new Promise((resolve, reject) => {
-                var proc = spawn(cmd, args,{ shell: true });
-                
-                // for debug purposes
-                proc.stdout.on('data', function (data) {
-                    console.log(data);
-                });
-
-                proc.stderr.setEncoding("utf8")
-                proc.stderr.on('data', function (data) {
-                     console.log(data);
-                });
-
-                proc.on('close', (code) => {
-                    if (code !== 0) {
-                        reject(`process exited with code ${code}`);
-                    } else {
-                        resolve('ok')
-                    }
-
-                });
-
-            })
-
-            await converter.then((message) => {
-                if (message == 'ok') {
-                    database.mashup.update({
-                        audioPath: audioPath,
-                        imagePath:imagePath
-                    }, {
-                        where: {
-                            id: wallPost.id,
-                            publicId: wallPost.publicId
-                        }
-                    })
-                    console.log(`Done : ${wallPost.postLink}`)
+            //audio download
+            await page.goto(wallPost.postLink, { waitUntil: 'networkidle2' });
+            const audioUrl = await getAudioData(page);
+            let audioPath = ''
+            if (audioUrl) {
+                let audioExt = (audioUrl.indexOf("/index.m3u8") === -1) ? "mp3" : "m3u8"
+                audioPath = `${downloadPath}/${wallPost.id}.${audioExt}`
+                if (audioExt === "mp3") {
+                    await downloadFile(audioUrl, audioPath)
                 } else {
-                    database.mashup.update({
-                        audioPath: '',
-                        status: 'AAC_CONVERSION_ERROR'
-                    }, {
-                        where: {
-                            id: wallPost.id,
-                            publicId: wallPost.publicId
-                        }
-                    })
-                    console.log(`AAC_CONVERSION_ERROR : ${wallPost.postLink}`)
+                    await downloadM3U8(audioUrl, audioPath)
+                    let m3u8Path = audioPath
+                    audioPath = `${downloadPath}/${wallPost.id}.aac`
+                    await convertM3U8(m3u8Path, audioPath)
                 }
-            })
-        }
-        else {
+            } else {
+                let errorMessage = { code: 1, message: 'AUDIO_NOT_FOUND' };
+                throw errorMessage
+            }
             await database.mashup.update({
-                status: 'AUDIO_NOT_FOUND'
+                audioPath: audioPath,
+                imagePath: imagePath
             }, {
                 where: {
                     id: wallPost.id,
                     publicId: wallPost.publicId
                 }
             })
-            await console.log('not found: ' + wallPost.postLink);
+            console.log(`Done : ${wallPost.postLink}`)
+        } catch (e) {
+            database.mashup.update({
+                audioPath: null,
+                imagePath: null,
+                status: e.message.toString()
+            }, {
+                where: {
+                    id: wallPost.id,
+                    publicId: wallPost.publicId
+                }
+            })
         }
         progressCount += 1;
         await console.log(progressCount + ' of ' + progressFinish + ' : ' + wallPost.postLink);

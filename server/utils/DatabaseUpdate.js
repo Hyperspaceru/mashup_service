@@ -42,11 +42,22 @@ function getInfoFromVkPostObject(vkPostObject) {
     if (attachments && attachments.length === 2) {
         let audioInfo;
         let imageInfo;
+        let imageExt;
         for (let attachment of attachments) {
             if (attachment.type === "audio") {
                 audioInfo = attachment.audio;
             } else if (attachment.type === "photo") {
                 imageInfo = getImageUrl(attachment.photo.sizes)
+                imageExt = 'jpg'
+            }
+            else if (attachment.type ==="doc" && attachment.doc.ext ==="gif" ){
+                if ('video' in attachment.doc.preview && 'src' in attachment.doc.preview.video){
+                    imageInfo = attachment.doc.preview.video.src
+                    imageExt = 'gif/mp4'
+                }else{
+                    imageInfo = attachment.doc.url
+                    imageExt = 'gif'
+                }                
             }
         }
         if (audioInfo !== undefined && imageInfo !== undefined) {
@@ -55,6 +66,7 @@ function getInfoFromVkPostObject(vkPostObject) {
                 publicId: vkPostObject.from_id,
                 postLink: 'https://vk.com/wall' + vkPostObject.from_id + '_' + vkPostObject.id,
                 imageUrl: imageInfo,
+                imageExt: imageExt,
                 author: audioInfo.artist,
                 title: audioInfo.title,
                 likes: vkPostObject.likes.count,
@@ -150,6 +162,7 @@ function DatabaseUpdate() {
                 }
             }
         }
+        console.log('end update')
     })
 
 

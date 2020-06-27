@@ -100,7 +100,7 @@ const UploadVideoToYoutube = () => {
             // await page.click('#select-files-button')
             // const uploadInput = await page.$('input[type="file"]')
             // await uploadInput.uploadFile('')
-            await page.waitFor(20000);
+            await page.waitFor(10000);
             let title = `${wallPost.author} - ${wallPost.title}`
             let description = '#mashup #мэшап \n \nSource: ' + wallPost.postLink
             await page.waitForSelector('[label="Title"] #textbox', { 'timeout': 0 });

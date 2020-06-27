@@ -5,11 +5,10 @@ import CombineVideo from '../utils/CombineVideo'
 import UploadVideoToYoutube from '../utils/UploadVideoToYoutube'
 
 function ScheduleService(){
-    //dbUpdate()
-    vkDownload()
+    // dbUpdate()
+    // vkDownload()
     // CombineVideo()
-    // UploadVideoToYoutube()
-
+    UploadVideoToYoutube()
 }
 
 export default ScheduleService
