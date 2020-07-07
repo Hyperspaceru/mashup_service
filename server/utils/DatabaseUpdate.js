@@ -111,61 +111,61 @@ const captchaHandler = ({ captcha_sid, captcha_img, resolve: solve, vk }) => {
 }
 
 function DatabaseUpdate() {
-    easyvk({
-        username: config.mashup.vk.phone,
-        password: config.mashup.vk.password,
-        session_file: config.mashup.vk.sessionFile,
-        captchaHandler: captchaHandler
-    }).then(async vk => {
-        let continueSearch = true
-        let offset = 0
-
-        while (continueSearch) {
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            let vkr = await vk.call('wall.get', {
-                domain: "mashup",
-                count: "100",
-                offset: offset
-            });
-
-            if (vkr.count - offset > 100 || offset < vkr.count) {
-                offset += 100;
-            } else {
-                continueSearch = false;
-            }
-
-            for (let wallPost of vkr.items) {
-                if (wallPost.marked_as_ads === 0) {
-                    let postInDb = await database.mashup.findOne({
-                        where: {
-                            id: wallPost.id,
-                            publicId: wallPost.from_id
-                        }
-                    })
-                    let newPost = getInfoFromVkPostObject(wallPost)
-                    if (newPost) {
-                        if (!postInDb) {
-                            await database.mashup.create(newPost)
-                        } else {
-                            let updateArgs = { likes: newPost.likes }
-                            if (postInDb.postDate === null) {
-                                updateArgs.postDate = newPost.postDate
+    return new Promise((resolve,reject)=>{
+        easyvk({
+            username: config.mashup.vk.phone,
+            password: config.mashup.vk.password,
+            session_file: config.mashup.vk.sessionFile,
+            captchaHandler: captchaHandler
+        }).then(async vk => {
+            let continueSearch = true
+            let offset = 0
+    
+            while (continueSearch) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                let vkr = await vk.call('wall.get', {
+                    domain: "mashup",
+                    count: "100",
+                    offset: offset
+                });
+    
+                if (vkr.count - offset > 100 || offset < vkr.count) {
+                    offset += 100;
+                } else {
+                    continueSearch = false;
+                }
+    
+                for (let wallPost of vkr.items) {
+                    if (wallPost.marked_as_ads === 0) {
+                        let postInDb = await database.mashup.findOne({
+                            where: {
+                                id: wallPost.id,
+                                publicId: wallPost.from_id
                             }
-                            await database.mashup.update(updateArgs, {
-                                where: {
-                                    id: postInDb.id,
-                                    publicId: postInDb.publicId
+                        })
+                        let newPost = getInfoFromVkPostObject(wallPost)
+                        if (newPost) {
+                            if (!postInDb) {
+                                await database.mashup.create(newPost)
+                            } else {
+                                let updateArgs = { likes: newPost.likes }
+                                if (postInDb.postDate === null) {
+                                    updateArgs.postDate = newPost.postDate
                                 }
-                            })
+                                await database.mashup.update(updateArgs, {
+                                    where: {
+                                        id: postInDb.id,
+                                        publicId: postInDb.publicId
+                                    }
+                                })
+                            }
                         }
                     }
                 }
             }
-        }
-        console.log('end update')
-    })
-
-
+            resolve('Done')
+        })
+    }) 
 }
 
 

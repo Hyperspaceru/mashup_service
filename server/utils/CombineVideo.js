@@ -2,7 +2,6 @@ import { spawn, exec } from 'child_process'
 import { Op } from 'sequelize'
 import database from '../models'
 import config from '../config/config'
-import { get } from 'https'
 import fs from 'fs'
 
 const cmd = '/usr/bin/ffmpeg';
@@ -126,65 +125,66 @@ const processGif = (output, inputImage, inputAudio) => {
 
 
 const CombineVideo = async () => {
-
-    const wallPosts = await database.mashup.findAll(
-        {
-            where: {
-                audioPath: {
-                    [Op.ne]: null
-                },
-                imagePath: {
-                    [Op.ne]: null
-                },
-                approve: true,
-                status: null,
-                videoPath: null
+    return new Promise(async(resolve,reject)=>{
+        const wallPosts = await database.mashup.findAll(
+            {
+                where: {
+                    audioPath: {
+                        [Op.ne]: null
+                    },
+                    imagePath: {
+                        [Op.ne]: null
+                    },
+                    approve: true,
+                    status: null,
+                    videoPath: null
+                }
             }
-        }
-    )
-    const progressFinish = wallPosts.length;
-    let progressCount = 0;
-
-    for (let wallPost of wallPosts) {
-        const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
-        const outputPath = `${config.mashup.downloadDir}/${downloadDir}/${wallPost.id}.mp4`
-        let converter
-        if (wallPost.imageExt === 'jpg') {
-            converter = processJpg(outputPath, wallPost.imagePath, wallPost.audioPath)
-        } else if (wallPost.imageExt === 'gif/mp4') {
-            let tempFile = `${config.mashup.downloadDir}/${downloadDir}/temp.txt`
-            converter = processMP4Loop(outputPath, wallPost.imagePath, wallPost.audioPath,tempFile)
-        } else if (wallPost.imageExt === 'gif'){
-            converter = processGif(outputPath, wallPost.imagePath, wallPost.audioPath)
-        }
-        await converter.then((message) => {
-            if (message == 'ok') {
-                database.mashup.update({
-                    videoPath: outputPath
-                }, {
-                    where: {
-                        id: wallPost.id,
-                        publicId: wallPost.publicId
-                    }
-                })
-                console.log(`Done : ${wallPost.postLink}`)
-            } else {
-                database.mashup.update({
-                    videoPath: '',
-                    status: 'VIDEO_CONVERSION_ERROR'
-                }, {
-                    where: {
-                        id: wallPost.id,
-                        publicId: wallPost.publicId
-                    }
-                })
-                console.log(`VIDEO_CONVERSION_ERROR: ${wallPost.postLink}`)
+        )
+        const progressFinish = wallPosts.length;
+        let progressCount = 0;
+    
+        for (let wallPost of wallPosts) {
+            const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
+            const outputPath = `${config.mashup.downloadDir}/${downloadDir}/${wallPost.id}.mp4`
+            let converter
+            if (wallPost.imageExt === 'jpg') {
+                converter = processJpg(outputPath, wallPost.imagePath, wallPost.audioPath)
+            } else if (wallPost.imageExt === 'gif/mp4') {
+                let tempFile = `${config.mashup.downloadDir}/${downloadDir}/temp.txt`
+                converter = processMP4Loop(outputPath, wallPost.imagePath, wallPost.audioPath,tempFile)
+            } else if (wallPost.imageExt === 'gif'){
+                converter = processGif(outputPath, wallPost.imagePath, wallPost.audioPath)
             }
-        })
-        progressCount += 1;
-        console.log(progressCount + ' of ' + progressFinish + ' : ' + wallPost.postLink);
-    }
-
+            await converter.then((message) => {
+                if (message == 'ok') {
+                    database.mashup.update({
+                        videoPath: outputPath
+                    }, {
+                        where: {
+                            id: wallPost.id,
+                            publicId: wallPost.publicId
+                        }
+                    })
+                    console.log(`Done : ${wallPost.postLink}`)
+                } else {
+                    database.mashup.update({
+                        videoPath: '',
+                        status: 'VIDEO_CONVERSION_ERROR'
+                    }, {
+                        where: {
+                            id: wallPost.id,
+                            publicId: wallPost.publicId
+                        }
+                    })
+                    console.log(`VIDEO_CONVERSION_ERROR: ${wallPost.postLink}`)
+                }
+            })
+            progressCount += 1;
+            console.log(progressCount + ' of ' + progressFinish + ' : ' + wallPost.postLink);
+        }
+        resolve("Done")
+    })
 }
 
 
