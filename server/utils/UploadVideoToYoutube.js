@@ -61,7 +61,7 @@ const UploadVideoToYoutube = (quota) => {
                 const cookies = await JSON.parse(cookiesString);
                 await page.setCookie(...cookies);
             } catch (error) {
-                console.log("youtube cookies not exits, create new...");
+                console.log("youtube cookies doesn't exist, create new...");
             }
 
             await page.goto('https://youtube.com', { waitUntil: 'networkidle2' });
