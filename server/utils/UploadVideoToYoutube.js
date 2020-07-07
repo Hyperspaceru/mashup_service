@@ -46,16 +46,26 @@ const authInYoutube = async (page) => {
         await fs.writeFile(config.mashup.youtube.cookies, JSON.stringify(cookies, null, 2));
     }
 }
-function combineVideoTitle(author,title){
+function combineVideoTitle(author, title, full = false) {
     let _author = filterUnallowedSymbolsInTitle(author)
     let _title = filterUnallowedSymbolsInTitle(title)
     let videoTitle = `${_author} - ${_title}`
     let allowedLength = 100
-    videoTitle = videoTitle.length>allowedLength?videoTitle.substring(0,allowedLength):videoTitle
+    if (!full) {
+        videoTitle = videoTitle.length > allowedLength ? videoTitle.substring(0, allowedLength-3)+'...' : videoTitle
+    }
     return videoTitle
 }
-function filterUnallowedSymbolsInTitle(value){
-    return value.replace(/>|</gim,'')
+function combineDescription(author,title,postLink){
+    let description = `#mashup #мэшап \n \nSource: ${postLink}` 
+    let fullTitle = combineVideoTitle(author,title,true)
+    if (fullTitle.length>100){
+        description = `#mashup #мэшап \n \nSource: ${postLink} \n \nFull title: ${fullTitle}`  
+    }
+    return description
+}
+function filterUnallowedSymbolsInTitle(value) {
+    return value.replace(/>|</gim, '')
 }
 
 const UploadVideoToYoutube = (quota) => {
@@ -91,7 +101,7 @@ const UploadVideoToYoutube = (quota) => {
                     status: null,
                     approve: true
                 },
-                limit:avaibleLimit
+                limit: avaibleLimit
             })
 
             const progressFinish = wallPosts.length;
@@ -118,8 +128,8 @@ const UploadVideoToYoutube = (quota) => {
                 })
 
                 await page.waitFor(10000);
-                let title = combineVideoTitle(wallPost.author,wallPost.title)
-                let description = '#mashup #мэшап \n \nSource: ' + wallPost.postLink
+                let title = combineVideoTitle(wallPost.author, wallPost.title)
+                let description = combineDescription(wallPost.author,wallPost.title,wallPost.postLink)
                 await page.waitForSelector('[label="Title"] #textbox', { 'timeout': 0 });
                 await page.waitFor(2000);
                 await page.focus('[label="Title"] #textbox');
