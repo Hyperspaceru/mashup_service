@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import fsSync from 'fs'
 import { https as httpsRedirect } from 'follow-redirects'
 import database from '../models'
@@ -115,133 +116,133 @@ const getAudioData = async (page) => {
 
 
 const DownloadFromVk = async (quota) => {
+    puppeteer.use(StealthPlugin())
     // for debug
-    const browser = await puppeteer.launch({ devtools: true });
-    // const browser = await puppeteer.launch();
-    return new Promise(async (resolve, reject) => {
-        const page = await browser.newPage();
+    // puppeteer usage as normal
+    // puppeteer.launch({ headless: true }).then(async browser => {
+    puppeteer.launch({ headless: false }).then(async browser => {
+        return new Promise(async (resolve, reject) => {
+            const page = await browser.newPage();
 
-        try {
-            const cookiesString = await fs.readFile(config.mashup.puppeteer.cookies);
-            const cookies = await JSON.parse(cookiesString);
-            await page.setCookie(...cookies);
-        } catch (error) {
-            console.log("File cookies does not exits, creating new...");
-        }
-
-
-
-        await page.goto('https://vk.com', { waitUntil: 'networkidle2' });
-        if (page.url() != 'https://vk.com/feed') {
-            await page.goto('https://vk.com', { waitUntil: 'networkidle2' });
-            let myemail = config.mashup.vk.email;
-            let mypassword = config.mashup.vk.password;
-            await page.evaluate((myemail, mypassword) => {
-                var email = document.getElementById('index_email');
-                email.value = myemail;
-                var pass = document.getElementById('index_pass');
-                pass.value = mypassword;
-            }, myemail, mypassword)
-            await page.click('#index_login_button');
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
-            if (page.url() == 'https://vk.com/feed') {
-                const cookies = await page.cookies();
-                await fs.writeFile(config.mashup.puppeteer.cookies, JSON.stringify(cookies, null, 2));
-            }
-        }
-        const downloadedPosts = await database.mashup.count({
-            where: {
-                approve: true,
-                imagePath: {
-                    [Op.ne]: null
-                },
-                audioPath: {
-                    [Op.ne]: null
-                },
-                youtubeLink: null,
-                status: null
-            }
-        })
-        const avaibleLimit = (quota.dailyQuotaLimit - downloadedPosts) > 0 ? quota.dailyQuotaLimit - downloadedPosts : 0
-        const wallPosts = await database.mashup.findAll({
-            where: {
-                approve: true,
-                status: null,
-                youtubeLink: null,
-                audioPath: null
-            },
-            limit: avaibleLimit
-        })
-        const progressFinish = wallPosts.length;
-        let progressCount = 0;
-        for (let wallPost of wallPosts) {
             try {
-                const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
-                const downloadPath = `${config.mashup.downloadDir}/${downloadDir}`
-                if (!fsSync.existsSync(downloadPath)) {
-                    fsSync.mkdirSync(downloadPath);
-                }
-                //image download
-                let imagePath
-                if (wallPost.imageExt === 'jpg') {
-                    imagePath = `${downloadPath}/${wallPost.id}.jpg`
-                } else if (wallPost.imageExt === 'gif/mp4') {
-                    imagePath = `${downloadPath}/${wallPost.id}.gif.mp4`
-                } else if (wallPost.imageExt === 'gif') {
-                    imagePath = `${downloadPath}/${wallPost.id}.gif`
-                }
-                await downloadFile(wallPost.imageUrl, imagePath)
-
-
-                //audio download
-                await page.goto(wallPost.postLink, { waitUntil: 'networkidle2' });
-                const audioUrl = await getAudioData(page);
-                let audioPath = ''
-                if (audioUrl) {
-                    let audioExt = (audioUrl.indexOf("/index.m3u8") === -1) ? "mp3" : "m3u8"
-                    audioPath = `${downloadPath}/${wallPost.id}.${audioExt}`
-                    if (audioExt === "mp3") {
-                        await downloadFile(audioUrl, audioPath)
-                    } else {
-                        await downloadM3U8(audioUrl, audioPath)
-                        let m3u8Path = audioPath
-                        audioPath = `${downloadPath}/${wallPost.id}.aac`
-                        await convertM3U8(m3u8Path, audioPath)
-                    }
-                } else {
-                    let errorMessage = { code: 1, message: 'AUDIO_NOT_FOUND' };
-                    throw errorMessage
-                }
-                await database.mashup.update({
-                    audioPath: audioPath,
-                    imagePath: imagePath
-                }, {
-                    where: {
-                        id: wallPost.id,
-                        publicId: wallPost.publicId
-                    }
-                })
-                console.log(`Done : ${wallPost.postLink}`)
-            } catch (e) {
-                database.mashup.update({
-                    audioPath: null,
-                    imagePath: null,
-                    status: e.message.toString()
-                }, {
-                    where: {
-                        id: wallPost.id,
-                        publicId: wallPost.publicId
-                    }
-                })
+                const cookiesString = await fs.readFile(config.mashup.puppeteer.cookies);
+                const cookies = await JSON.parse(cookiesString);
+                await page.setCookie(...cookies);
+            } catch (error) {
+                console.log("File cookies does not exits, creating new...");
             }
-            progressCount += 1;
-            await console.log(progressCount + ' of ' + progressFinish + ' : ' + wallPost.postLink);
-        }
-        resolve('Done')
-    }).finally(() => {
-        browser.close()
-    })
 
+            await page.goto('https://vk.com', { waitUntil: 'networkidle2' });
+            if (page.url() != 'https://vk.com/feed') {
+                await page.goto('https://vk.com', { waitUntil: 'networkidle2' });
+                let myemail = config.mashup.vk.email;
+                let mypassword = config.mashup.vk.password;
+                await page.evaluate((myemail, mypassword) => {
+                    var email = document.getElementById('index_email');
+                    email.value = myemail;
+                    var pass = document.getElementById('index_pass');
+                    pass.value = mypassword;
+                }, myemail, mypassword)
+                await page.click('#index_login_button');
+                await page.waitForNavigation({ waitUntil: 'networkidle2' });
+                if (page.url() == 'https://vk.com/feed') {
+                    const cookies = await page.cookies();
+                    await fs.writeFile(config.mashup.puppeteer.cookies, JSON.stringify(cookies, null, 2));
+                }
+            }
+            const downloadedPosts = await database.mashup.count({
+                where: {
+                    approve: true,
+                    imagePath: {
+                        [Op.ne]: null
+                    },
+                    audioPath: {
+                        [Op.ne]: null
+                    },
+                    youtubeLink: null,
+                    status: null
+                }
+            })
+            const avaibleLimit = (quota.dailyQuotaLimit - downloadedPosts) > 0 ? quota.dailyQuotaLimit - downloadedPosts : 0
+            const wallPosts = await database.mashup.findAll({
+                where: {
+                    approve: true,
+                    status: null,
+                    youtubeLink: null,
+                    audioPath: null
+                },
+                limit: avaibleLimit
+            })
+            const progressFinish = wallPosts.length;
+            let progressCount = 0;
+            for (let wallPost of wallPosts) {
+                try {
+                    const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
+                    const downloadPath = `${config.mashup.downloadDir}/${downloadDir}`
+                    if (!fsSync.existsSync(downloadPath)) {
+                        fsSync.mkdirSync(downloadPath);
+                    }
+                    //image download
+                    let imagePath
+                    if (wallPost.imageExt === 'jpg') {
+                        imagePath = `${downloadPath}/${wallPost.id}.jpg`
+                    } else if (wallPost.imageExt === 'gif/mp4') {
+                        imagePath = `${downloadPath}/${wallPost.id}.gif.mp4`
+                    } else if (wallPost.imageExt === 'gif') {
+                        imagePath = `${downloadPath}/${wallPost.id}.gif`
+                    }
+                    await downloadFile(wallPost.imageUrl, imagePath)
+
+
+                    //audio download
+                    await page.goto(wallPost.postLink, { waitUntil: 'networkidle2' });
+                    const audioUrl = await getAudioData(page);
+                    let audioPath = ''
+                    if (audioUrl) {
+                        let audioExt = (audioUrl.indexOf("/index.m3u8") === -1) ? "mp3" : "m3u8"
+                        audioPath = `${downloadPath}/${wallPost.id}.${audioExt}`
+                        if (audioExt === "mp3") {
+                            await downloadFile(audioUrl, audioPath)
+                        } else {
+                            await downloadM3U8(audioUrl, audioPath)
+                            let m3u8Path = audioPath
+                            audioPath = `${downloadPath}/${wallPost.id}.aac`
+                            await convertM3U8(m3u8Path, audioPath)
+                        }
+                    } else {
+                        let errorMessage = { code: 1, message: 'AUDIO_NOT_FOUND' };
+                        throw errorMessage
+                    }
+                    await database.mashup.update({
+                        audioPath: audioPath,
+                        imagePath: imagePath
+                    }, {
+                        where: {
+                            id: wallPost.id,
+                            publicId: wallPost.publicId
+                        }
+                    })
+                    console.log(`Done : ${wallPost.postLink}`)
+                } catch (e) {
+                    database.mashup.update({
+                        audioPath: null,
+                        imagePath: null,
+                        status: e.message.toString()
+                    }, {
+                        where: {
+                            id: wallPost.id,
+                            publicId: wallPost.publicId
+                        }
+                    })
+                }
+                progressCount += 1;
+                await console.log(progressCount + ' of ' + progressFinish + ' : ' + wallPost.postLink);
+            }
+            resolve('Done')
+        }).finally(() => {
+            browser.close()
+        })
+    })
 }
 
 export default DownloadFromVk
