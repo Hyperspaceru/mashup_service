@@ -46,6 +46,17 @@ const authInYoutube = async (page) => {
         await fs.writeFile(config.mashup.youtube.cookies, JSON.stringify(cookies, null, 2));
     }
 }
+function combineVideoTitle(author,title){
+    let _author = filterUnallowedSymbolsInTitle(author)
+    let _title = filterUnallowedSymbolsInTitle(title)
+    let videoTitle = `${_author} - ${_title}`
+    let allowedLength = 100
+    videoTitle = videoTitle.length>allowedLength?videoTitle.substring(0,allowedLength):videoTitle
+    return videoTitle
+}
+function filterUnallowedSymbolsInTitle(value){
+    return value.replace(/>|</gim,'')
+}
 
 const UploadVideoToYoutube = (quota) => {
 
@@ -107,7 +118,7 @@ const UploadVideoToYoutube = (quota) => {
                 })
 
                 await page.waitFor(10000);
-                let title = `${wallPost.author} - ${wallPost.title}`
+                let title = combineVideoTitle(wallPost.author,wallPost.title)
                 let description = '#mashup #мэшап \n \nSource: ' + wallPost.postLink
                 await page.waitForSelector('[label="Title"] #textbox', { 'timeout': 0 });
                 await page.waitFor(2000);
