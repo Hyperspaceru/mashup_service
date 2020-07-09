@@ -30,8 +30,8 @@ function getInfoFromVkPostObject(vkPostObject) {
     // Если это репост на стену, вся инфа об attachment хранится в copy_history
     if ("attachments" in vkPostObject) {
         attachments = vkPostObject.attachments
-    }else{
-        if ("copy_history" in vkPostObject && vkPostObject.copy_history.length > 0 && "attachments" in vkPostObject.copy_history[0]){
+    } else {
+        if ("copy_history" in vkPostObject && vkPostObject.copy_history.length > 0 && "attachments" in vkPostObject.copy_history[0]) {
             attachments = vkPostObject.copy_history[0].attachments
         }
     }
@@ -53,14 +53,14 @@ function getInfoFromVkPostObject(vkPostObject) {
                 imageInfo = getImageUrl(attachment.photo.sizes)
                 imageExt = 'jpg'
             }
-            else if (attachment.type ==="doc" && attachment.doc.ext ==="gif" ){
-                if ('video' in attachment.doc.preview && 'src' in attachment.doc.preview.video){
+            else if (attachment.type === "doc" && attachment.doc.ext === "gif") {
+                if ('video' in attachment.doc.preview && 'src' in attachment.doc.preview.video) {
                     imageInfo = attachment.doc.preview.video.src
                     imageExt = 'gif/mp4'
-                }else{
+                } else {
                     imageInfo = attachment.doc.url
                     imageExt = 'gif'
-                }                
+                }
             }
         }
         if (audioInfo !== undefined && imageInfo !== undefined) {
@@ -114,7 +114,7 @@ const captchaHandler = ({ captcha_sid, captcha_img, resolve: solve, vk }) => {
 }
 
 function DatabaseUpdate() {
-    return new Promise((resolve,reject)=>{
+    return new Promise((resolve, reject) => {
         easyvk({
             username: config.mashup.vk.phone,
             password: config.mashup.vk.password,
@@ -123,7 +123,7 @@ function DatabaseUpdate() {
         }).then(async vk => {
             let continueSearch = true
             let offset = 0
-    
+
             while (continueSearch) {
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 let vkr = await vk.call('wall.get', {
@@ -131,13 +131,13 @@ function DatabaseUpdate() {
                     count: "100",
                     offset: offset
                 });
-    
+
                 if (vkr.count - offset > 100 || offset < vkr.count) {
                     offset += 100;
                 } else {
                     continueSearch = false;
                 }
-    
+
                 for (let wallPost of vkr.items) {
                     if (wallPost.marked_as_ads === 0) {
                         let postInDb = await database.mashup.findOne({
@@ -151,9 +151,16 @@ function DatabaseUpdate() {
                             if (!postInDb) {
                                 await database.mashup.create(newPost)
                             } else {
-                                let updateArgs = { likes: newPost.likes }
+                                let updateArgs = {
+                                    likes: newPost.likes
+                                }
                                 if (postInDb.postDate === null) {
                                     updateArgs.postDate = newPost.postDate
+                                }
+                                //обновлять ссылки, т.к. замечено, что они начинают протухать через какое то время - особенно на gif
+                                if(postInDb.approve !== false && postInDb.youtubeLink === null){                                    
+                                    updateArgs.imageUrl = newPost.imageUrl
+                                    updateArgs.imageExt = newPost.imageExt
                                 }
                                 await database.mashup.update(updateArgs, {
                                     where: {
@@ -168,7 +175,7 @@ function DatabaseUpdate() {
             }
             resolve('Done')
         })
-    }) 
+    })
 }
 
 
