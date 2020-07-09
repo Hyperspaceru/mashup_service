@@ -2,28 +2,24 @@
     list-style-type: none;
     display:flex;
     flex-direction: row;
+    margin:0;
+    padding:0;
 }
 .pagination__item{
- 
-}
-.pagination__link--active{
-    background-color: #4CAF50;
-    color: white;
-}
-.pagination__link{
     margin: 0px -1px;
     padding: 8px 16px;
+}
+.pagination__link{   
     text-decoration: none;
-    color: black;
-    border: 1px solid #ddd;
+    color:rgba(150,150,150,1);
 }
-.pagination__link:hover:not(.pagination__link--active){
-    background-color: #ddd
+.pagination__link--active{
+    color:white;
 }
-.pagination__item:last-child .pagination__link{
-    border-radius: 0px 5px 5px 0px;
+.pagination__link:active{
+    color:white;
 }
-.pagination__item:first-child .pagination__link{
-    border-radius: 5px 0px 0px 5px;
+.pagination__item:hover:not(.pagination__link--active){
+    background-color: rgba(255, 255, 255,0.08)
 }
 

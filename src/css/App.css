@@ -1,25 +1,107 @@
 .App {
   text-align: center;
+  background-color: rgb(24,24,24);
+  color:rgb(220, 220, 220);
 }
 .container {
   display: flex;
   flex-wrap: nowrap;
 }
 .main_menu {
-  flex:0 0 256px;
+  flex:0 0 72px;
   margin:0;
   padding:0;
 }
 .content{
-    flex:1;
+  width: 100%;
+  padding: 0 10px 0 20px;
 }
 .header {
  text-align:left;
- padding: 12px 24px 12px 24px;
+ padding: 12px 24px 12px 12px;
  font-family: 'Roboto', sans-serif;
  font-weight:bold;
- background-color: #ddd;
+ background-color: rgb(32,32,32);
+ display:flex;
+ align-items: center;
 }
 .header__text{
   margin:0px 0px 0px 10px;
+
 }
+.header__left{
+ /* flex-basis:1; */
+ flex:1;
+ display:flex;
+}
+.header__center{
+  /* flex-basis:3; */
+  flex:3;
+}
+
+.header__right{
+  /* flex-basis:1; */
+  flex:1;
+}
+.header__sandvich{
+  padding:.7em .1em .7em .1em;
+  flex:1;
+}
+.sandvich__icon{
+  font-size: 1.5em;
+  color:rgb(220, 220, 220);
+}
+
+.logo{
+  display: flex;
+  flex-direction: column;
+  padding:0em 0em 0em 0em;
+  margin: 0em 0em 0em 0em;
+  flex:7;
+}
+.logo__text{
+  font-family: 'modak', cursive ,'adcaregular';
+  font-size: 2em;
+  font-weight: 50;
+  color:rgb(220, 220, 220);
+  margin: 0.4em 0em 0em 0em;
+  padding:0em  0em 0em 0.2em;
+  flex:1;
+  line-height: 0.8em;
+}
+.logo__sharp{
+  color:red;
+  font-weight: 50;
+}
+.logo__subtext{
+  font-size: 0.7em;
+  color:hsl(0, 0%, 79%);
+  padding: 0 0 0 6.4em;
+  flex:10;
+}
+.searchbar{
+  width: 100%;
+  display:flex;
+  background-color: rgb(18,18,18);
+  /* border: 1px solid rgba(150,150,150,.35); */
+}
+.searchbar__button{
+  background-color:  rgb(49,49,49);
+  border:none;
+  color:rgba(150,150,150,1);
+}
+.searchbar__input{
+  flex:12;
+  line-height: 24px;  
+  background-color: transparent;
+  border:none;
+  border-radius: 6px 0px 0px 6px;
+}
+.searchbar__input:active{
+
+}
+.searchbar__button{
+  flex:1;
+
+}
+

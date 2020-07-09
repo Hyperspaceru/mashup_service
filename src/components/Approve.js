@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import '../css/Approve.css';
 import Pagination from './Pagination'
 import Mashups from './Mashups'
+import { useMemo } from 'react';
 
-const MENU_STATE = ["WAIT", "DENY", "ACCEPT", "ERROR", "DONE"]
+const MENU_STATE = { "WAIT": "Wait accept", "DENY": "Deny", "ACCEPT": "Accepted", "ERROR": "Errors", "DONE": "Uploaded" }
 
-function Approve(menuState) {
+function Approve({ menuState, className, countHandler }) {
     const [loading, setLoading] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [mashupList, setMashupList] = useState([])
@@ -16,7 +17,7 @@ function Approve(menuState) {
         const fetchMeshaps = async () => {
             setLoading(true)
             let fetchUrl = ""
-            switch (menuState.menuState) {
+            switch (menuState) {
                 case "DENY":
                     fetchUrl = 'mashup?type=deny&page=' + currentPage
                     break;
@@ -50,7 +51,7 @@ function Approve(menuState) {
         }
         fetchMeshaps()
     }, [currentPage, menuState])
-
+    useMemo(()=>countHandler(totalMashup), [totalMashup,countHandler])
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
     const mashupListUpdate = (newMashup) => {
         const updatedMashupList = mashupList.map(mashup => {
@@ -77,16 +78,19 @@ function Approve(menuState) {
         console.log(response)
     }
     return (
-        <div className="Approve">
-            <h2 className="approve__header">Wait for approve</h2>
-            <Pagination currentPage={currentPage} totalPages={totalPages} paginate={paginate} loading={loading}></Pagination>
+        <div className={"approve" + " " + className}>
+            <h2 className="approve__header">{MENU_STATE[menuState]}</h2>
             <Mashups mashupList={mashupList} updateHook={mashupListUpdate} loading={loading}></Mashups>
             <div className="approve__controls">
-                <button onClick={() => sendForm()} className='button approve__accept'><i class="fas fa-check"></i><span>Approve checked</span></button>
-                <button onClick={() => resetAllApprove(false)} className='button approve__unmark'><i class="fas fa-check"></i><span>Unmark all</span></button>
-                <button onClick={() => resetAllApprove(true)} className='button'><i class="fas fa-check"></i><span>Mark all</span></button>
+                <div className="controls__pagination">
+                    <Pagination currentPage={currentPage} totalPages={totalPages} paginate={paginate} loading={loading}></Pagination>
+                </div>
+                <div className="controls__buttons">
+                    <button onClick={() => resetAllApprove(true)} className='button'><i class="fas fa-check button__icon"></i><span>Mark all</span></button>
+                    <button onClick={() => resetAllApprove(false)} className='button approve__unmark'><i class="fas fa-times button__icon"></i><span>Unmark all</span></button>
+                    <button onClick={() => sendForm()} className='button approve__accept'><i class="far fa-paper-plane button__icon"></i><span>Send</span></button>
+                </div>
             </div>
-            <Pagination currentPage={currentPage} totalPages={totalPages} paginate={paginate} loading={loading}></Pagination>
         </div>
     );
 }
