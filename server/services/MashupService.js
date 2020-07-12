@@ -73,6 +73,9 @@ class MashupService {
                 where: {
                     status: {
                         [Op.ne]: null
+                    },
+                    approve:{
+                        [Op.ne]: false
                     }
                 }
             })
