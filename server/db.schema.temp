@@ -1,0 +1,19 @@
+{
+    mashups:{},
+    dbUpdates:{
+        date:date,
+        status:str,
+        updated:int,
+        inserted:int,
+        lastId:?
+    },
+    dailyQuotas:{
+        date:date,
+        usage:int,
+        quota:int,
+        overlimit:bool
+    },
+    publics:{
+        id:int
+    }
+}

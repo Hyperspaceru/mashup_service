@@ -1,5 +1,6 @@
 const resolve = require ('path').resolve
 require('dotenv').config();
+const firebase = require('firebase')
 
 
 
@@ -50,5 +51,6 @@ module.exports = {
       password: process.env.YOUTUBE_PASS,
       cookies: resolve('./server/config/credentials/cookiesYoutube.json')
     }
-  }
+  },
+  firebase:firebase.initializeApp(JSON.parse(process.env.FIREBASE_CONFIG))
 };
