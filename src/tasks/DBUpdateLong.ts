@@ -1,7 +1,28 @@
+import { Task, api } from "actionhero"
 import easyvk from 'easyvk'
-import database from '../models';
+import database from '../models'
 import config from '../config/config'
 import readline from 'readline'
+import fsSync from 'fs'
+
+export class DBUpdateLong extends Task {
+    constructor() {
+        super();
+        this.name = "DBUpdateLong";
+        this.description = "an actionhero task";
+        this.frequency = 0;
+        this.queue = "default";
+        this.middleware = [];
+    }
+
+    async run() {
+        api.log('start')
+        await update()
+        api.log('end')
+    }
+}
+
+
 
 function getImageUrl(ImageArray) {
     // old algo for extract photo key
@@ -113,8 +134,12 @@ const captchaHandler = ({ captcha_sid, captcha_img, resolve: solve, vk }) => {
 
 }
 
-function DatabaseUpdate() {
+function update() {
     return new Promise((resolve, reject) => {
+        debugger
+        if (!fsSync.existsSync(config.mashup.vk.sessionFile)) {
+            fsSync.writeFileSync(config.mashup.vk.sessionFile,'')
+        }
         easyvk({
             username: config.mashup.vk.phone,
             password: config.mashup.vk.password,
@@ -151,14 +176,20 @@ function DatabaseUpdate() {
                             if (!postInDb) {
                                 await database.mashup.create(newPost)
                             } else {
-                                let updateArgs = {
+                                interface updateArgs {
+                                    likes?: any;
+                                    postDate?: any;
+                                    imageUrl?: any;
+                                    imageExt?: any;
+                                }
+                                let updateArgs: updateArgs = {
                                     likes: newPost.likes
                                 }
                                 if (postInDb.postDate === null) {
                                     updateArgs.postDate = newPost.postDate
                                 }
                                 //обновлять ссылки, т.к. замечено, что они начинают протухать через какое то время - особенно на gif
-                                if(postInDb.approve !== false && postInDb.youtubeLink === null){                                    
+                                if (postInDb.approve !== false && postInDb.youtubeLink === null) {
                                     updateArgs.imageUrl = newPost.imageUrl
                                     updateArgs.imageExt = newPost.imageExt
                                 }
@@ -178,6 +209,4 @@ function DatabaseUpdate() {
     })
 }
 
-
-export default DatabaseUpdate
 

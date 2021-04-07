@@ -1,3 +1,4 @@
+import { Task } from "actionhero";
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import fsSync from 'fs'
@@ -9,6 +10,26 @@ import { spawn } from 'child_process'
 
 const fs = require('fs').promises;
 const cmd = '/usr/bin/ffmpeg';
+
+export class MyTask extends Task {
+  constructor() {
+    super();
+    this.name = "DownloadFromVK";
+    this.description = "an actionhero task";
+    this.frequency = 0;
+    this.queue = "default";
+    this.middleware = [];
+  }
+
+  async run(data) {
+    await DownloadFromVk(10)
+  }
+}
+
+
+
+
+
 
 const downloadFile = (url, path) => {
     return new Promise((resolve) => {
@@ -138,9 +159,9 @@ const DownloadFromVk = async (quota) => {
                 let myemail = config.mashup.vk.email;
                 let mypassword = config.mashup.vk.password;
                 await page.evaluate((myemail, mypassword) => {
-                    var email = document.getElementById('index_email');
+                    let email:any = document.getElementById('index_email');
                     email.value = myemail;
-                    var pass = document.getElementById('index_pass');
+                    let pass:any  = document.getElementById('index_pass');
                     pass.value = mypassword;
                 }, myemail, mypassword)
                 await page.click('#index_login_button');
@@ -244,8 +265,6 @@ const DownloadFromVk = async (quota) => {
         })
     })
 }
-
-export default DownloadFromVk
 
 
 
