@@ -4,6 +4,8 @@ import database from '../models'
 import config from '../config/config'
 import readline from 'readline'
 import fsSync from 'fs'
+import path from 'path'
+import fs from 'fs'
 
 export class DBUpdateLong extends Task {
     constructor() {
@@ -134,11 +136,19 @@ const captchaHandler = ({ captcha_sid, captcha_img, resolve: solve, vk }) => {
 
 }
 
+function createFileAndSubfolder(filePath){
+    if (!fsSync.existsSync(filePath)) {
+        if(!fsSync.existsSync(path.dirname(filePath))){
+            fsSync.mkdirSync(path.dirname(filePath),{recursive:true})
+        }
+        fsSync.writeFileSync(filePath,'')
+    }
+}
+
 function update() {
     return new Promise((resolve, reject) => {
-        debugger
         if (!fsSync.existsSync(config.mashup.vk.sessionFile)) {
-            fsSync.writeFileSync(config.mashup.vk.sessionFile,'')
+            createFileAndSubfolder(config.mashup.vk.sessionFile)
         }
         easyvk({
             username: config.mashup.vk.phone,

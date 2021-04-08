@@ -4,7 +4,6 @@ require('dotenv').config();
 
 
 module.exports = {
-  
   development: {
     database: 'mashup',
     username: process.env.DB_USER,
@@ -38,7 +37,7 @@ module.exports = {
       email: process.env.VK_EMAIL,
       phone: process.env.VK_PHONE,
       password: process.env.VK_PASS,
-      sessionFile: resolve("./sessions/vsCookies")
+      sessionFile: resolve("./sessions/vkCookies")
     },
     puppeteer:{
       cookies: resolve('./sessions/puppeteerCookies.json')

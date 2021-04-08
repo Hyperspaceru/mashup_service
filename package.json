@@ -14,7 +14,7 @@
     "ioredis": "latest",
     "ioredis-mock": "latest",
     "node-schedule": "^2.0.0",
-    "pg": "^8.5.1", 
+    "pg": "^8.5.1",
     "puppeteer": "^2.0.0",
     "puppeteer-extra": "^3.1.9",
     "puppeteer-extra-plugin-stealth": "^2.4.9",
@@ -23,8 +23,8 @@
     "ws": "latest"
   },
   "devDependencies": {
-    "@types/node": "latest",
     "@types/jest": "latest",
+    "@types/node": "latest",
     "jest": "latest",
     "prettier": "latest",
     "ts-jest": "latest",

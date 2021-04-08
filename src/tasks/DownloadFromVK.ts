@@ -137,11 +137,11 @@ const getAudioData = async (page) => {
 
 
 const DownloadFromVk = async (quota) => {
-    puppeteer.use(StealthPlugin())
+    await puppeteer.use(StealthPlugin())
     // for debug
     // puppeteer usage as normal
     // puppeteer.launch({ headless: true }).then(async browser => {
-    puppeteer.launch({ headless: false }).then(async browser => {
+    await puppeteer.launch({ headless: false }).then(async browser => {
         return new Promise(async (resolve, reject) => {
             const page = await browser.newPage();
 
