@@ -10,7 +10,7 @@ import { spawn } from 'child_process'
 import Quota from '../utils/Quota'
 
 const fs = require('fs').promises;
-const cmd = '/usr/bin/ffmpeg';
+const cmd = '/usr/bin/streamlink';
 
 export class MyTask extends Task {
   constructor() {
@@ -51,15 +51,13 @@ const downloadFile = (url, path) => {
 
 const convertM3U8 = (m3u8Path, audioPath) => {
     const args = [
-        '-y',
-        '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
-        '-c:a', 'aac',
-        '-i', m3u8Path,
-        '-c', 'copy',
-        audioPath
+        'hlsvariant://file:///'+m3u8Path,
+        'best',
+        '-o', audioPath
     ]
 
     let converter = new Promise((resolve, reject) => {
+        debugger
         var proc = spawn(cmd, args, { shell: true });
         // for debug purposes
         proc.stdout.on('data', function (data) {
@@ -71,6 +69,7 @@ const convertM3U8 = (m3u8Path, audioPath) => {
         });
 
         proc.on('close', (code) => {
+            debugger
             if (code !== 0) {
                 reject(`process exited with code ${code}`);
             } else {
