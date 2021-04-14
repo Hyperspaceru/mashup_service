@@ -51,13 +51,13 @@ const downloadFile = (url, path) => {
 
 const convertM3U8 = (m3u8Path, audioPath) => {
     const args = [
-        'hlsvariant://file:///'+m3u8Path,
+        'hlsvariant://file:///'+m3u8Path,        
         'best',
+        '-f',
         '-o', audioPath
     ]
 
     let converter = new Promise((resolve, reject) => {
-        debugger
         var proc = spawn(cmd, args, { shell: true });
         // for debug purposes
         proc.stdout.on('data', function (data) {
@@ -69,7 +69,6 @@ const convertM3U8 = (m3u8Path, audioPath) => {
         });
 
         proc.on('close', (code) => {
-            debugger
             if (code !== 0) {
                 reject(`process exited with code ${code}`);
             } else {

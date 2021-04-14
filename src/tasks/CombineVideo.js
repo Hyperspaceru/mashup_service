@@ -164,7 +164,6 @@ const CombineVideo = async () => {
         let progressCount = 0;
     
         for (let wallPost of wallPosts) {
-            debugger    
             const downloadDir = `wall${wallPost.publicId}_${wallPost.id}`
             const outputPath = `${config.mashup.downloadDir}/${downloadDir}/${wallPost.id}.mp4`
             let converter

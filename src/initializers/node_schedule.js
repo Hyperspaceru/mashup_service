@@ -18,7 +18,7 @@ export class Scheduler extends Initializer {
       // no matter how many schedulers we have running
       if (api.resque.scheduler && api.resque.scheduler.leader) {
         await task.enqueue(
-          "DownloadFromVK",
+          "UploadVideoToYoutube",
           { time: new Date().toString() },
           "default"
         );
