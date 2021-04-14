@@ -1,3 +1,4 @@
+import { Task } from "actionhero";
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import fsSync from 'fs'
@@ -6,9 +7,32 @@ import database from '../models'
 import { Op } from 'sequelize'
 import config from '../config/config'
 import { spawn } from 'child_process'
+import Quota from '../utils/Quota'
 
 const fs = require('fs').promises;
-const cmd = '/usr/bin/ffmpeg';
+const cmd = '/usr/bin/streamlink';
+
+export class MyTask extends Task {
+  constructor() {
+    super();
+    this.name = "DownloadFromVK";
+    this.description = "an actionhero task";
+    this.frequency = 0;
+    this.queue = "default";
+    this.middleware = [];
+  }
+
+  async run(data) {
+    let quota = new Quota()
+    quota.date = new Date()
+    await DownloadFromVk(quota)
+  }
+}
+
+
+
+
+
 
 const downloadFile = (url, path) => {
     return new Promise((resolve) => {
@@ -27,11 +51,10 @@ const downloadFile = (url, path) => {
 
 const convertM3U8 = (m3u8Path, audioPath) => {
     const args = [
-        '-y',
-        '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
-        '-i', m3u8Path,
-        '-c', 'copy',
-        audioPath
+        'hlsvariant://file:///'+m3u8Path,        
+        'best',
+        '-f',
+        '-o', audioPath
     ]
 
     let converter = new Promise((resolve, reject) => {
@@ -95,32 +118,56 @@ const getAudioData = async (page) => {
                 if (e = h(e[0]), 'string' != typeof i || !e) return t; for (var o, a, s = (i = i ? i.split(String.fromCharCode(9)) : []).length; s--;) { if (o = (a = i[s].split(String.fromCharCode(11))).splice(0, 1, e)[0], !c[o]) return t; e = c[o].apply(null, a) } if (e && 'http' === e.substr(0, 4)) return e
             } return t
         }
-       
+        function getFullAudioId (dataAudio) {
+            let hashArr=dataAudio[13].split('/');
+            return dataAudio[1]+'_'+dataAudio[0]+'_'+hashArr[2]+'_'+hashArr[5]
+        }
+        async function getAudioUrl (fullId){
+            let rqvst = await new Promise((resolve,reject)=>{
+                ajax.post("al_audio.php?act=reload_audio", {
+                    ids: fullId
+                },{onDone:(t,i,a,o)=>{
+                    resolve(t)
+                },onFail:t=>reject(t)})
+            })
+            return rqvst[0][2]
+        }
         let audioRows = document.querySelectorAll(".wall_text .audio_row");
         let audioData = [];
         for (let audioRow of audioRows) {
-            audioData.push(JSON.parse(audioRow.getAttribute('data-audio')));
+            let fullId = getFullAudioId(JSON.parse(audioRow.getAttribute('data-audio')))
+            return getAudioUrl(fullId).then(encryptedUrl=>encode_url(encryptedUrl)).then(decryptedUrl=>{
+                let songUrl = ''
+                if (!decryptedUrl.indexOf("audio_api_unavailable.mp3") > -1  ) {
+                    songUrl = decryptedUrl;
+                }   
+                return new Promise((resolve) => {
+                    resolve(songUrl);
+                })
+
+            })
         }
-        let songUrl = ''
-        if (audioData.length > 0) {
-            songUrl = encode_url(audioData[0][2]);
-            if (songUrl.indexOf("audio_api_unavailable.mp3") > -1  ) {
-                songUrl = '';
-            }           
-        }
-        return await new Promise((resolve) => {
-            resolve(songUrl);
-        })
+        // let songUrl = ''
+        // debugger
+        // if (audioData.length > 0) {
+        //     songUrl = encode_url(audioData[0]);
+        //     if (songUrl.indexOf("audio_api_unavailable.mp3") > -1  ) {
+        //         songUrl = '';
+        //     }           
+        // }
+        // return await new Promise((resolve) => {
+        //     resolve(songUrl);
+        // })
     })()`)
 }
 
 
 const DownloadFromVk = async (quota) => {
-    puppeteer.use(StealthPlugin())
+    await puppeteer.use(StealthPlugin())
     // for debug
     // puppeteer usage as normal
     // puppeteer.launch({ headless: true }).then(async browser => {
-    puppeteer.launch({ headless: false }).then(async browser => {
+    await puppeteer.launch({ headless: false }).then(async browser => {
         return new Promise(async (resolve, reject) => {
             const page = await browser.newPage();
 
@@ -138,9 +185,9 @@ const DownloadFromVk = async (quota) => {
                 let myemail = config.mashup.vk.email;
                 let mypassword = config.mashup.vk.password;
                 await page.evaluate((myemail, mypassword) => {
-                    var email = document.getElementById('index_email');
+                    let email = document.getElementById('index_email');
                     email.value = myemail;
-                    var pass = document.getElementById('index_pass');
+                    let pass  = document.getElementById('index_pass');
                     pass.value = mypassword;
                 }, myemail, mypassword)
                 await page.click('#index_login_button');
@@ -222,8 +269,10 @@ const DownloadFromVk = async (quota) => {
                             publicId: wallPost.publicId
                         }
                     })
+                    
                     console.log(`Done : ${wallPost.postLink}`)
                 } catch (e) {
+                    
                     database.mashup.update({
                         audioPath: null,
                         imagePath: null,
@@ -244,8 +293,6 @@ const DownloadFromVk = async (quota) => {
         })
     })
 }
-
-export default DownloadFromVk
 
 
 

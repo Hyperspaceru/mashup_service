@@ -1,8 +1,27 @@
+import { Task } from "actionhero"
 import { spawn, exec } from 'child_process'
 import { Op } from 'sequelize'
 import database from '../models'
 import config from '../config/config'
 import fs from 'fs'
+
+export class MyTask extends Task {
+  constructor() {
+    super();
+    this.name = "CombineVideo";
+    this.description = "an actionhero task";
+    this.frequency = 0;
+    this.queue = "default";
+    this.middleware = [];
+  }
+
+  async run(data) {
+    api.log('start')   
+    await CombineVideo()
+    api.log('end')
+  }
+}
+
 
 const cmd = '/usr/bin/ffmpeg';
 
@@ -186,7 +205,4 @@ const CombineVideo = async () => {
         resolve("Done")
     })
 }
-
-
-export default CombineVideo
 

@@ -1,27 +1,30 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Actionhero files
+pids/*
+tmp/*
+log/*
+cache/*
+coverage/*
+node_modules/*
+locales/test-env-*
+public/javascript/ActionheroWebsocketClient.js
+public/javascript/ActionheroWebsocketClient.min.js
+dist
+sessions/*
+downloads/*
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Node / NPM
+npm-debug.log
 
-# testing
-/coverage
-
-# production
-/build
-
-# misc
+# OS-specific weirdness
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
+# Redis
+dump.rdb
+cache.dump
+
+# Editor-specific
+/nbproject/*
+/.idea/*
+
+#ENV file
 .env
-
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-/server/config/credentials
-/public/downloads

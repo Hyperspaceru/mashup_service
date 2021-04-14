@@ -1,11 +1,32 @@
+import { Task } from "actionhero"
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import fsSync from 'fs'
 import database from '../models'
 import { Op } from 'sequelize'
 import config from '../config/config'
-
+import Quota from '../utils/Quota'
 const fs = require('fs').promises;
+
+export class MyTask extends Task {
+  constructor() {
+    super();
+    this.name = "UploadVideoToYoutube";
+    this.description = "an actionhero task";
+    this.frequency = 0;
+    this.queue = "default";
+    this.middleware = [];
+  }
+
+  async run(data) {
+    // your logic here
+    let quota = new Quota()
+    quota.date = new Date()
+    await UploadVideoToYoutube(quota)
+  }
+}
+
+
 
 const checkAuthElemExist = async (page) => {
     return await page.evaluate(`(async () => {
@@ -17,29 +38,35 @@ const checkAuthElemExist = async (page) => {
 }
 
 const authInYoutube = async (page) => {
+  
     await page.evaluate(() => {
         document.querySelectorAll('#buttons .yt-simple-endpoint.style-scope.ytd-button-renderer')[0].click()
     })
     await page.waitForNavigation({ waitUntil: 'networkidle2' })
     await page.waitFor(5000);
-    let myEmail = config.mashup.youtube.email
-    let myPassword = config.mashup.youtube.password
-    await page.evaluate((email) => {
-        document.querySelectorAll('[type="email"]')[0].value = email
-        document.querySelectorAll('[role="button"]#identifierNext')[0].click()
-    }, myEmail)
-    await page.waitForNavigation({ waitUntil: 'networkidle2' })
-    await page.waitFor(5000);
-    await page.evaluate((password) => {
-        document.querySelectorAll('[type="password"]')[0].value = password
-        document.querySelectorAll('[role="button"]#passwordNext')[0].click()
-    }, myPassword)
-    await page.waitFor(20000);
-    await page.evaluate(() => {
-        document.querySelectorAll('input[value="108053260554169632683"]')[0].click()
-        document.querySelectorAll('#identity-prompt-confirm-button')[0].click()
-    })
-    await page.waitFor(5000);
+    // let myEmail = config.mashup.youtube.email
+    // let myPassword = config.mashup.youtube.password
+   
+    await page.waitFor(60000)
+    // await page.evaluate((email) => {
+    //     document.querySelectorAll('[type="email"]')[0].value = email
+    //     document.querySelectorAll('[role="button"]#identifierNext')[0].click()
+    // }, myEmail)
+    // await page.waitForNavigation({ waitUntil: 'networkidle2' })
+    // await page.waitFor(5000);
+    // debugger
+    // await page.evaluate((password) => {
+    //     document.querySelectorAll('[type="password"]')[0].value = password
+    //     document.querySelectorAll('[role="button"]#passwordNext')[0].click()
+    // }, myPassword)
+    // await page.waitFor(20000);
+    // // debugger
+    // await page.evaluate(() => {
+    //     document.querySelectorAll('input[value="108053260554169632683"]')[0].click()
+    //     document.querySelectorAll('#identity-prompt-confirm-button')[0].click()
+    // })
+    // await page.waitFor(5000);
+    
     let authElem = await checkAuthElemExist(page)
     if (authElem) {
         const cookies = await page.cookies();
@@ -68,15 +95,15 @@ function filterUnallowedSymbolsInTitle(value) {
     return value.replace(/>|</gim, '')
 }
 
-const UploadVideoToYoutube = (quota) => {
-
+const UploadVideoToYoutube = async (quota) => {
+    
     puppeteer.use(StealthPlugin())
     // puppeteer usage as normal
     // puppeteer.launch({ headless: true }).then(async browser => {
-    puppeteer.launch({ headless: false }).then(async browser => {
+    await puppeteer.launch({ headless: false }).then(async browser => {
         return new Promise(async (resolve, reject) => {
             const page = await browser.newPage()
-
+           
             try {
                 const cookiesString = await fs.readFile(config.mashup.youtube.cookies);
                 const cookies = await JSON.parse(cookiesString);
@@ -86,10 +113,10 @@ const UploadVideoToYoutube = (quota) => {
             }
 
             await page.goto('https://youtube.com', { waitUntil: 'networkidle2' });
-
+            
             let authElem = await checkAuthElemExist(page)
             if (!authElem) {
-                await authInYoutube()
+                await authInYoutube(page)
             }
             const avaibleLimit = quota.dailyQuotaLimit - quota.dailyQuota
             const wallPosts = await database.mashup.findAll({
@@ -103,7 +130,6 @@ const UploadVideoToYoutube = (quota) => {
                 },
                 limit: avaibleLimit
             })
-
             const progressFinish = wallPosts.length;
             let progressCount = 0;
 
@@ -113,7 +139,7 @@ const UploadVideoToYoutube = (quota) => {
                 //вынести id канала в config
                 await page.goto('https://studio.youtube.com/channel/UClzF_HUhGumeqPja1UaXWhQ/videos/upload?d=ud', { waitUntil: 'networkidle2' });
                 await page.waitFor(5000);
-
+                
                 const inputUploadHandle = await page.$('input[type=file]');
                 await inputUploadHandle.uploadFile(wallPost.videoPath);
                 await page.evaluate(() => {
@@ -137,13 +163,15 @@ const UploadVideoToYoutube = (quota) => {
                 await page.focus('[label="Description"] #textbox');
                 await page.keyboard.type(description)
                 await page.evaluate(() => {
-                    document.querySelectorAll('[label="More options"]')[0].click()
+                    document.querySelectorAll('#toggle-button')[0].click()
                 })
                 await page.waitFor(1000);
                 let tags = 'mashup,мэшап'
-                await page.focus('[input-aria-label="Tags"] #text-input');
+                await page.focus('.ytcp-chip-bar[aria-label="Tags"]');
                 await page.keyboard.type(tags)
                 await page.keyboard.press('Enter');
+                await page.waitFor(1000);
+                await page.click('#next-button')
                 await page.waitFor(1000);
                 await page.click('#next-button')
                 await page.waitFor(1000);
@@ -187,5 +215,3 @@ const UploadVideoToYoutube = (quota) => {
         }).finally(() => { browser.close() })
     })
 }
-
-export default UploadVideoToYoutube
