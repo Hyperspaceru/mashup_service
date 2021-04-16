@@ -194,7 +194,8 @@ const UploadVideoToYoutube = async (quota) => {
                 await page.click('#done-button')
                 await page.waitFor(3000);
                 await database.mashup.update({
-                    youtubeLink: youtubeLink
+                    youtubeLink: youtubeLink,
+                    youtubeUploadDate: new Date()
                 }, {
                     where: {
                         id: wallPost.id,

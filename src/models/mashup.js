@@ -55,6 +55,9 @@ module.exports = (sequelize, DataTypes) => {
     },
     likes: {
       type: DataTypes.INTEGER
+    },
+    youtubeUploadDate:{
+      type: DataTypes.DATEONLY
     }
   }, {});
   mashup.associate = function(models) {
