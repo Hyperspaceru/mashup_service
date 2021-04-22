@@ -5,12 +5,40 @@ const getAverageLikes = (posts) => {
     return likes.reduce((prev, curr) => prev + curr, 0) / likes.length;
 }
 
+const calcAverageLikes = () => {
+    const approvedPosts = await database.mashup.findAll({
+        where: {
+            [Op.and]: [
+                {
+                    approve: true
+                },
+                {
+                    imagePath: null
+                },
+                {
+                    audioPath: null
+                },
+                { youtubeLink: null },
+                { status: null }
+
+            ]
+
+        }
+    })
+    if (approvedPosts.length>0){
+        return getAverageLikes(approvedPosts)
+    }else{
+        return 0
+    }
+}
+
 export default class DownloadQuota {
     constructor() {
         this._downloadQuota = 20
         this._quotaAboveAverageLikes = ~~(this._downloadQuota / 2)
         this._quotaBelowAverageLikes = ~~(this._downloadQuota / 2)
         quotaInit()
+        this._averageLikes = calcAverageLikes()
     }
     quotaInit() {
         const downloadedPosts = await database.mashup.findAll({
@@ -58,5 +86,8 @@ export default class DownloadQuota {
     }
     get quotaBelowAverageLikes(){
         return this._quotaBelowAverageLikes           
+    }
+    get averageLikes(){
+        return this._averageLikes
     }
 }
