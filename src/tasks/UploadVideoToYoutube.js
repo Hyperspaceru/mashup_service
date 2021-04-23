@@ -5,7 +5,7 @@ import fsSync from 'fs'
 import database from '../models'
 import { Op } from 'sequelize'
 import config from '../config/config'
-import Quota from '../utils/Quota'
+import UploadQuota from "../utils/UploadQuota"
 const fs = require('fs').promises;
 
 export class MyTask extends Task {
@@ -19,9 +19,7 @@ export class MyTask extends Task {
   }
 
   async run(data) {
-    // your logic here
-    let quota = new Quota()
-    quota.date = new Date()
+    let quota = await new UploadQuota()
     await UploadVideoToYoutube(quota)
   }
 }
@@ -118,18 +116,16 @@ const UploadVideoToYoutube = async (quota) => {
             if (!authElem) {
                 await authInYoutube(page)
             }
-            const avaibleLimit = quota.dailyQuotaLimit - quota.dailyQuota
-            const wallPosts = await database.mashup.findAll({
-                where: {
-                    videoPath: {
-                        [Op.ne]: null
-                    },
-                    youtubeLink: null,
-                    status: null,
-                    approve: true
-                },
-                limit: avaibleLimit
+            const above = database.mashup.findAll({
+                where: { approve: true, status: null, youtubeLink: null, videoPath: {[Op.ne]: null},likes:{[Op.gt]:quota.averageLikes} },
+                limit: quota.quotaAboveAverageLikes
             })
+            const below = database.mashup.findAll({
+                where: { approve: true, status: null, youtubeLink: null, videoPath: {[Op.ne]: null},likes:{[Op.lt]:quota.averageLikes} },
+                limit: quota.quotaBelowAverageLikes
+            })
+            const wallPosts = await Promise.all([above,below]).then(([aboveRes,belowRes]) => [...aboveRes,...belowRes])
+
             const progressFinish = wallPosts.length;
             let progressCount = 0;
 
@@ -209,7 +205,6 @@ const UploadVideoToYoutube = async (quota) => {
                 await page.waitFor(10000);
 
                 progressCount += 1;
-                quota.incrementDailyQuota()
                 console.log(progressCount + ' of ' + progressFinish + ' : ' + wallPost.postLink);
             }
             resolve('Done')

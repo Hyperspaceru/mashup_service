@@ -1,11 +1,12 @@
 import database from '../models'
+import { Op } from 'sequelize'
 
 const getAverageLikes = (posts) => {
     const likes = posts.map((post) => post.likes)
     return likes.reduce((prev, curr) => prev + curr, 0) / likes.length;
 }
 
-const calcAverageLikes = () => {
+const calcAverageLikes = async () => {
     const approvedPosts = await database.mashup.findAll({
         where: {
             [Op.and]: [
@@ -25,22 +26,25 @@ const calcAverageLikes = () => {
 
         }
     })
-    if (approvedPosts.length>0){
+    if (approvedPosts.length > 0) {
         return getAverageLikes(approvedPosts)
-    }else{
+    } else {
         return 0
     }
 }
 
 export default class DownloadQuota {
     constructor() {
-        this._downloadQuota = 20
-        this._quotaAboveAverageLikes = ~~(this._downloadQuota / 2)
-        this._quotaBelowAverageLikes = ~~(this._downloadQuota / 2)
-        quotaInit()
-        this._averageLikes = calcAverageLikes()
+        return (async () => {
+            this._downloadQuota = 20
+            this._quotaAboveAverageLikes = ~~(this._downloadQuota / 2)
+            this._quotaBelowAverageLikes = ~~(this._downloadQuota / 2)
+            await this.quotaInit()
+            this._averageLikes = await calcAverageLikes()
+            return this
+        })()
     }
-    quotaInit() {
+    async quotaInit() {
         const downloadedPosts = await database.mashup.findAll({
             where: {
                 [Op.and]: [
@@ -69,25 +73,25 @@ export default class DownloadQuota {
         if (downloadedPosts.length > 0) {
             if (downloadedPosts.length < this._downloadQuota) {
                 const averageLikes = getAverageLikes(downloadedPosts)
-                const quotaAboveAverageLikes = donwloadedPosts.reduce((accum, post) => post.likes > averageLikes ? accum++ : accum)
-                const quotaBelowAverageLikes = donwloadedPosts.reduce((accum, post) => post.likes < averageLikes ? accum++ : accum)
+                const quotaAboveAverageLikes = downloadedPosts.reduce((accum, post) => parseInt(post.likes) > averageLikes ? accum + 1 : accum, 0)
+                const quotaBelowAverageLikes = downloadedPosts.reduce((accum, post) => parseInt(post.likes) < averageLikes ? accum + 1 : accum, 0)
                 this._downloadQuota = this._downloadQuota - downloadedPosts.length
-                this._quotaAboveAverageLikes = _quotaAboveAverageLikes - quotaAboveAverageLikes
-                this._quotaBelowAverageLikes = _quotaBelowAverageLikes - quotaBelowAverageLikes
-            }else{
+                this._quotaAboveAverageLikes = this._quotaAboveAverageLikes - quotaAboveAverageLikes
+                this._quotaBelowAverageLikes = this._quotaBelowAverageLikes - quotaBelowAverageLikes
+            } else {
                 this._downloadQuota = 0
                 this._quotaAboveAverageLikes = 0
                 this._quotaBelowAverageLikes = 0
             }
         }
     }
-    get quotaAboveAverageLikes(){
-        return this._quotaAboveAverageLikes        
+    get quotaAboveAverageLikes() {
+        return this._quotaAboveAverageLikes
     }
-    get quotaBelowAverageLikes(){
-        return this._quotaBelowAverageLikes           
+    get quotaBelowAverageLikes() {
+        return this._quotaBelowAverageLikes
     }
-    get averageLikes(){
+    get averageLikes() {
         return this._averageLikes
     }
 }
