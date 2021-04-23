@@ -12,10 +12,42 @@ export class Scheduler extends Initializer {
   }
 
   start() {
-    // do this job every 10 seconds, cron style
-    const job = schedule.scheduleJob("0,10,20,30,40,50 * * * * *", async () => {
-      // we want to ensure that only one instance of this job is scheduled in our environment at once,
-      // no matter how many schedulers we have running
+    ///UTC+0 TIME
+    ///update DB
+    const updateDBJob = schedule.scheduleJob("0 0 21 * * *", async () => {
+      if (api.resque.scheduler && api.resque.scheduler.leader) {
+        await task.enqueue(
+          "DBUpdateLong",
+          { time: new Date().toString() },
+          "default"
+        );
+      }
+    }); 
+    this.scheduledJobs.push(updateDBJob);
+     ///Download from vk
+     const downloadFromVKjob = schedule.scheduleJob("0 0 23 * * *", async () => {
+      if (api.resque.scheduler && api.resque.scheduler.leader) {
+        await task.enqueue(
+          "DownloadFromVk",
+          { time: new Date().toString() },
+          "default"
+        );
+      }
+    }); 
+    this.scheduledJobs.push(downloadFromVKjob);
+     ///Combine video
+     const combineVideoJob = schedule.scheduleJob("0 0 1 * * *", async () => {
+      if (api.resque.scheduler && api.resque.scheduler.leader) {
+        await task.enqueue(
+          "CombineVideo",
+          { time: new Date().toString() },
+          "default"
+        );
+      }
+    }); 
+    this.scheduledJobs.push(combineVideoJob);
+    ///UploadToYoutube
+    const youtubeUploadJob = schedule.scheduleJob("0 0 3 * * *", async () => {
       if (api.resque.scheduler && api.resque.scheduler.leader) {
         await task.enqueue(
           "UploadVideoToYoutube",
@@ -23,9 +55,8 @@ export class Scheduler extends Initializer {
           "default"
         );
       }
-    });
-
-    this.scheduledJobs.push(job);
+    }); 
+    this.scheduledJobs.push(youtubeUploadJob);
   }
 
   stop() {

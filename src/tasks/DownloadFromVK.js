@@ -7,26 +7,25 @@ import database from '../models'
 import { Op } from 'sequelize'
 import config from '../config/config'
 import { spawn } from 'child_process'
-import Quota from '../utils/Quota'
+import DownloadQuota from "../utils/DownloadQuota"
 
 const fs = require('fs').promises;
 const cmd = '/usr/bin/streamlink';
 
 export class MyTask extends Task {
-  constructor() {
-    super();
-    this.name = "DownloadFromVK";
-    this.description = "an actionhero task";
-    this.frequency = 0;
-    this.queue = "default";
-    this.middleware = [];
-  }
+    constructor() {
+        super();
+        this.name = "DownloadFromVK";
+        this.description = "an actionhero task";
+        this.frequency = 0;
+        this.queue = "default";
+        this.middleware = [];
+    }
 
-  async run(data) {
-    let quota = new Quota()
-    quota.date = new Date()
-    await DownloadFromVk(quota)
-  }
+    async run(data) {
+        let quota = await new DownloadQuota()
+        await DownloadFromVk(quota)
+    }
 }
 
 
@@ -51,7 +50,7 @@ const downloadFile = (url, path) => {
 
 const convertM3U8 = (m3u8Path, audioPath) => {
     const args = [
-        'hlsvariant://file:///'+m3u8Path,        
+        'hlsvariant://file:///' + m3u8Path,
         'best',
         '-f',
         '-o', audioPath
@@ -187,7 +186,7 @@ const DownloadFromVk = async (quota) => {
                 await page.evaluate((myemail, mypassword) => {
                     let email = document.getElementById('index_email');
                     email.value = myemail;
-                    let pass  = document.getElementById('index_pass');
+                    let pass = document.getElementById('index_pass');
                     pass.value = mypassword;
                 }, myemail, mypassword)
                 await page.click('#index_login_button');
@@ -197,29 +196,16 @@ const DownloadFromVk = async (quota) => {
                     await fs.writeFile(config.mashup.puppeteer.cookies, JSON.stringify(cookies, null, 2));
                 }
             }
-            const downloadedPosts = await database.mashup.count({
-                where: {
-                    approve: true,
-                    imagePath: {
-                        [Op.ne]: null
-                    },
-                    audioPath: {
-                        [Op.ne]: null
-                    },
-                    youtubeLink: null,
-                    status: null
-                }
+            const above = database.mashup.findAll({
+                where: { approve: true, status: null, youtubeLink: null, audioPath: null,likes:{[Op.gt]:quota.averageLikes} },
+                limit: quota.quotaAboveAverageLikes
             })
-            const avaibleLimit = (quota.dailyQuotaLimit - downloadedPosts) > 0 ? quota.dailyQuotaLimit - downloadedPosts : 0
-            const wallPosts = await database.mashup.findAll({
-                where: {
-                    approve: true,
-                    status: null,
-                    youtubeLink: null,
-                    audioPath: null
-                },
-                limit: avaibleLimit
+            const below = database.mashup.findAll({
+                where: { approve: true, status: null, youtubeLink: null, audioPath: null,likes:{[Op.lt]:quota.averageLikes} },
+                limit: quota.quotaBelowAverageLikes
             })
+            const wallPosts = await Promise.all([above,below]).then(([aboveRes,belowRes]) => [...aboveRes,...belowRes])
+
             const progressFinish = wallPosts.length;
             let progressCount = 0;
             for (let wallPost of wallPosts) {
@@ -269,10 +255,10 @@ const DownloadFromVk = async (quota) => {
                             publicId: wallPost.publicId
                         }
                     })
-                    
+
                     console.log(`Done : ${wallPost.postLink}`)
                 } catch (e) {
-                    
+
                     database.mashup.update({
                         audioPath: null,
                         imagePath: null,
